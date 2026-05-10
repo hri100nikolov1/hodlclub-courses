@@ -19,6 +19,10 @@ function getEmbedUrl(url: string): string {
   return url
 }
 
+function isGoogleDrive(url: string): boolean {
+  return url.includes('drive.google.com')
+}
+
 export default function LessonPlayer({ lessons }: { lessons: Lesson[] }) {
   const [activeIndex, setActiveIndex] = useState(0)
   const activeLesson = lessons[activeIndex]
@@ -37,6 +41,13 @@ export default function LessonPlayer({ lessons }: { lessons: Lesson[] }) {
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               title={activeLesson.title}
             />
+            {/* Покрива бутона за сваляне на Google Drive */}
+            {activeLesson.videoUrl && isGoogleDrive(activeLesson.videoUrl) && (
+              <div
+                className="absolute top-0 right-0 z-10"
+                style={{ width: '220px', height: '50px', background: '#000' }}
+              />
+            )}
           </div>
         </div>
       ) : (
