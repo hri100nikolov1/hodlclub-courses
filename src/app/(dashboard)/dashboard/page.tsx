@@ -12,18 +12,21 @@ export default async function DashboardPage() {
     include: {
       course: {
         include: {
-          modules: { orderBy: { order: 'asc' } },
+          modules: {
+            orderBy: { order: 'asc' },
+            include: { lessons: { select: { id: true } } },
+          },
         },
       },
     },
   })
 
-  const progress = await prisma.moduleProgress.findMany({
+  const lessonProgress = await prisma.lessonProgress.findMany({
     where: { userId: session.userId },
-    select: { moduleId: true },
+    select: { lessonId: true },
   })
 
-  const completedIds = new Set(progress.map((p) => p.moduleId))
+  const completedLessonIds = new Set(lessonProgress.map((p) => p.lessonId))
 
   return (
     <div>
@@ -47,9 +50,10 @@ export default async function DashboardPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {accessList.map(({ course }) => {
-            const totalModules = course.modules.length
-            const completedModules = course.modules.filter((m) => completedIds.has(m.id)).length
-            const progressPct = totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0
+            const allLessons = course.modules.flatMap((m) => m.lessons)
+            const totalLessons = allLessons.length
+            const completedLessons = allLessons.filter((l) => completedLessonIds.has(l.id)).length
+            const progressPct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
 
             return (
               <Link
@@ -78,7 +82,7 @@ export default async function DashboardPage() {
                   {/* Progress */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs text-gray-500">
-                      <span>{completedModules}/{totalModules} модула</span>
+                      <span>{completedLessons}/{totalLessons} урока</span>
                       <span className="font-medium text-indigo-600">{progressPct}%</span>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
