@@ -14,7 +14,9 @@ async function getPrices(): Promise<CoinPrice[]> {
       { next: { revalidate: 300 }, signal: AbortSignal.timeout(5000) }
     )
     if (!res.ok) return []
-    return await res.json()
+    const data = await res.json()
+    if (!Array.isArray(data)) return []
+    return data
   } catch {
     return []
   }
@@ -28,7 +30,6 @@ function formatPrice(price: number): string {
 
 export default async function CryptoPrices() {
   const coins = await getPrices()
-
   if (coins.length === 0) return null
 
   return (
