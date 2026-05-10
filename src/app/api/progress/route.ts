@@ -31,3 +31,17 @@ export async function POST(request: NextRequest) {
 
   return Response.json({ ok: true, progress })
 }
+
+export async function DELETE(request: NextRequest) {
+  const session = await getSession()
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { moduleId } = await request.json()
+  if (!moduleId) return Response.json({ error: 'moduleId required' }, { status: 400 })
+
+  await prisma.moduleProgress.deleteMany({
+    where: { userId: session.userId, moduleId },
+  })
+
+  return Response.json({ ok: true })
+}
