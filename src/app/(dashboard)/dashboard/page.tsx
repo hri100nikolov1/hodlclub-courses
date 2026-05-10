@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import CryptoPrices from '@/components/CryptoPrices'
+import CryptoNews from '@/components/CryptoNews'
 
 export default async function DashboardPage() {
   const session = await getSession()
@@ -113,6 +115,15 @@ export default async function DashboardPage() {
           })}
         </div>
       )}
+      {/* Crypto Prices */}
+      <div className="mt-10">
+        <CryptoPrices />
+      </div>
+
+      {/* Crypto News */}
+      <div className="mt-6 mb-6">
+        <CryptoNews />
+      </div>
     </div>
   )
 }
