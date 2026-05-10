@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import CryptoPrices from '@/components/CryptoPrices'
 import CryptoNews from '@/components/CryptoNews'
 
@@ -117,12 +118,30 @@ export default async function DashboardPage() {
       )}
       {/* Crypto Prices */}
       <div className="mt-10">
-        <CryptoPrices />
+        <Suspense fallback={
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 animate-pulse">
+            <div className="h-5 bg-gray-100 rounded w-32 mb-4" />
+            <div className="grid grid-cols-5 gap-3">
+              {[...Array(5)].map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-xl" />)}
+            </div>
+          </div>
+        }>
+          <CryptoPrices />
+        </Suspense>
       </div>
 
       {/* Crypto News */}
       <div className="mt-6 mb-6">
-        <CryptoNews />
+        <Suspense fallback={
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 animate-pulse">
+            <div className="h-5 bg-gray-100 rounded w-36 mb-5" />
+            <div className="grid grid-cols-3 gap-4">
+              {[...Array(6)].map((_, i) => <div key={i} className="h-52 bg-gray-100 rounded-xl" />)}
+            </div>
+          </div>
+        }>
+          <CryptoNews />
+        </Suspense>
       </div>
     </div>
   )

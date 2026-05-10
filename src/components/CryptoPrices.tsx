@@ -11,7 +11,7 @@ async function getPrices(): Promise<CoinPrice[]> {
   try {
     const res = await fetch(
       'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,solana,binancecoin,ripple&order=market_cap_desc&sparkline=false',
-      { next: { revalidate: 300 } }
+      { next: { revalidate: 300 }, signal: AbortSignal.timeout(5000) }
     )
     if (!res.ok) return []
     return await res.json()

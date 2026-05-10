@@ -12,7 +12,7 @@ async function getNews(): Promise<NewsItem[]> {
   try {
     const res = await fetch(
       'https://min-api.cryptocompare.com/data/v2/news/?lang=EN&limit=6&sortOrder=latest',
-      { next: { revalidate: 600 } }
+      { next: { revalidate: 600 }, signal: AbortSignal.timeout(5000) }
     )
     if (!res.ok) return []
     const data = await res.json()
