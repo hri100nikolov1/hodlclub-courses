@@ -41,12 +41,18 @@ export default function LessonPlayer({ lessons }: { lessons: Lesson[] }) {
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               title={activeLesson.title}
             />
-            {/* Покрива бутона за сваляне на Google Drive */}
+            {/* Покрива бутона за сваляне на Google Drive с логото */}
             {activeLesson.videoUrl && isGoogleDrive(activeLesson.videoUrl) && (
               <div
-                className="absolute top-0 right-0 z-10"
-                style={{ width: '220px', height: '50px', background: '#000' }}
-              />
+                className="absolute top-0 right-0 z-10 flex items-center justify-end"
+                style={{ width: '220px', height: '50px', background: 'linear-gradient(to left, rgba(0,0,0,0.7) 60%, transparent)' }}
+              >
+                <img
+                  src="/logo.png"
+                  alt="HODLClub"
+                  style={{ height: '32px', width: 'auto', opacity: 0.55, marginRight: '10px' }}
+                />
+              </div>
             )}
           </div>
         </div>
