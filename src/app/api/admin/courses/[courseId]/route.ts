@@ -15,7 +15,7 @@ export async function GET(
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },
-    include: { modules: { orderBy: { order: 'asc' } } },
+    include: { modules: { orderBy: { order: 'asc' }, include: { lessons: { orderBy: { order: 'asc' } } } } },
   })
 
   if (!course) return Response.json({ error: 'Not found' }, { status: 404 })

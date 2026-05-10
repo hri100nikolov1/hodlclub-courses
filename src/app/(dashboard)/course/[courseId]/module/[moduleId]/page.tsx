@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import CompleteModuleButton from '@/components/CompleteModuleButton'
+import LessonPlayer from '@/components/LessonPlayer'
 
 export default async function ModulePage({
   params,
@@ -14,7 +15,6 @@ export default async function ModulePage({
 
   const { courseId, moduleId } = await params
 
-  // Check course access
   const hasAccess =
     session.role === 'admin' ||
     !!(await prisma.userCourseAccess.findUnique({
@@ -25,7 +25,12 @@ export default async function ModulePage({
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },
-    include: { modules: { orderBy: { order: 'asc' } } },
+    include: {
+      modules: {
+        orderBy: { order: 'asc' },
+        include: { lessons: { orderBy: { order: 'asc' } } },
+      },
+    },
   })
 
   if (!course) notFound()
@@ -35,7 +40,6 @@ export default async function ModulePage({
 
   const currentModule = course.modules[moduleIndex]
 
-  // Check if module is locked
   const progress = await prisma.moduleProgress.findMany({
     where: { userId: session.userId },
     select: { moduleId: true },
@@ -43,37 +47,17 @@ export default async function ModulePage({
 
   const completedIds = new Set(progress.map((p) => p.moduleId))
 
-  const isLocked =
-    moduleIndex > 0 && !completedIds.has(course.modules[moduleIndex - 1].id)
-
+  const isLocked = moduleIndex > 0 && !completedIds.has(course.modules[moduleIndex - 1].id)
   if (isLocked) redirect(`/course/${courseId}`)
 
   const isCompleted = completedIds.has(moduleId)
   const nextModule = course.modules[moduleIndex + 1]
 
-  // Convert YouTube URL to embed URL
-  function getEmbedUrl(url: string): string {
-    if (!url) return ''
-    // Already embed URL
-    if (url.includes('youtube.com/embed/')) return url
-    // YouTube watch URL
-    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/)
-    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?rel=0`
-    // Google Drive URL
-    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/)
-    if (driveMatch) return `https://drive.google.com/file/d/${driveMatch[1]}/preview`
-    return url
-  }
-
-  const embedUrl = currentModule.videoUrl ? getEmbedUrl(currentModule.videoUrl) : null
-
   return (
     <div>
       {/* Back */}
-      <Link
-        href={`/course/${courseId}`}
-        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition mb-6"
-      >
+      <Link href={`/course/${courseId}`}
+        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition mb-6">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
@@ -94,28 +78,18 @@ export default async function ModulePage({
             )}
           </div>
 
-          {/* Video Player */}
-          {embedUrl ? (
-            <div className="bg-black rounded-2xl overflow-hidden shadow-lg">
-              <div className="relative" style={{ paddingTop: '56.25%' }}>
-                <iframe
-                  src={embedUrl}
-                  className="absolute inset-0 w-full h-full"
-                  allowFullScreen
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  title={currentModule.title}
-                />
+          {/* Lessons */}
+          {currentModule.lessons.length === 0 ? (
+            <div className="bg-gray-100 rounded-2xl flex items-center justify-center h-48">
+              <div className="text-center text-gray-400">
+                <svg className="w-10 h-10 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <p className="text-sm">Съдържанието ще бъде добавено скоро</p>
               </div>
             </div>
           ) : (
-            <div className="bg-gray-100 rounded-2xl flex items-center justify-center h-64">
-              <div className="text-center text-gray-400">
-                <svg className="w-12 h-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-                <p>Видеото ще бъде добавено скоро</p>
-              </div>
-            </div>
+            <LessonPlayer lessons={currentModule.lessons} />
           )}
 
           {/* Complete Button */}
@@ -138,43 +112,39 @@ export default async function ModulePage({
             return (
               <div key={mod.id}>
                 {isModLocked ? (
-                  <div className={`flex items-center gap-3 p-3 rounded-xl border ${isCurrent ? 'border-indigo-200 bg-indigo-50' : 'border-gray-100 bg-gray-50'} opacity-50`}>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50 opacity-50">
                     <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
                       <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
                     </div>
-                    <p className="text-sm text-gray-500 truncate">{mod.title}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-500 truncate">{mod.title}</p>
+                      <p className="text-xs text-gray-400">{mod.lessons.length} урока</p>
+                    </div>
                   </div>
                 ) : (
-                  <Link
-                    href={`/course/${courseId}/module/${mod.id}`}
+                  <Link href={`/course/${courseId}/module/${mod.id}`}
                     className={`flex items-center gap-3 p-3 rounded-xl border transition ${
-                      isCurrent
-                        ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
-                        : isDone
-                        ? 'border-green-200 bg-green-50 hover:bg-green-100'
-                        : 'border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
-                        isCurrent
-                          ? 'bg-indigo-600 text-white'
-                          : isDone
-                          ? 'bg-green-500 text-white'
-                          : 'bg-gray-200 text-gray-600'
-                      }`}
-                    >
+                      isCurrent ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+                      : isDone ? 'border-green-200 bg-green-50 hover:bg-green-100'
+                      : 'border-gray-200 hover:bg-gray-50'
+                    }`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                      isCurrent ? 'bg-indigo-600 text-white'
+                      : isDone ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 text-gray-600'
+                    }`}>
                       {isDone ? (
                         <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
-                      ) : (
-                        index + 1
-                      )}
+                      ) : index + 1}
                     </div>
-                    <p className="text-sm font-medium truncate">{mod.title}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{mod.title}</p>
+                      <p className="text-xs text-gray-400">{mod.lessons.length} урока</p>
+                    </div>
                   </Link>
                 )}
               </div>

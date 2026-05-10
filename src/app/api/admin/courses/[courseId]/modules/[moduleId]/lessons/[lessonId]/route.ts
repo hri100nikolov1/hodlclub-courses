@@ -4,39 +4,38 @@ import { getSession } from '@/lib/session'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ courseId: string; moduleId: string }> }
+  { params }: { params: Promise<{ lessonId: string }> }
 ) {
   const session = await getSession()
   if (!session || session.role !== 'admin') {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { moduleId } = await params
-  const { title, description, order, isPublished } = await request.json()
+  const { lessonId } = await params
+  const { title, videoUrl, order } = await request.json()
 
-  const module = await prisma.module.update({
-    where: { id: moduleId },
+  const lesson = await prisma.lesson.update({
+    where: { id: lessonId },
     data: {
       ...(title !== undefined && { title }),
-      ...(description !== undefined && { description }),
+      ...(videoUrl !== undefined && { videoUrl }),
       ...(order !== undefined && { order }),
-      ...(isPublished !== undefined && { isPublished }),
     },
   })
 
-  return Response.json({ module })
+  return Response.json({ lesson })
 }
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ courseId: string; moduleId: string }> }
+  { params }: { params: Promise<{ lessonId: string }> }
 ) {
   const session = await getSession()
   if (!session || session.role !== 'admin') {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { moduleId } = await params
-  await prisma.module.delete({ where: { id: moduleId } })
+  const { lessonId } = await params
+  await prisma.lesson.delete({ where: { id: lessonId } })
   return Response.json({ ok: true })
 }
