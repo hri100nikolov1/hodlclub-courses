@@ -9,58 +9,67 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      String   @default("student")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  courseAccess   UserCourseAccess[]
-  moduleProgress ModuleProgress[]
-  usedInvite     InviteToken?      @relation("UsedInvite")
+  id             String             @id @default(cuid())
+  email          String             @unique
+  name           String
+  password       String
+  role           String             @default("student")
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  usedInvite      InviteToken?       @relation("UsedInvite")
+  moduleProgress  ModuleProgress[]
+  lessonProgress  LessonProgress[]
+  courseAccess    UserCourseAccess[]
 }
 
 model Course {
-  id          String   @id @default(cuid())
+  id          String             @id @default(cuid())
   title       String
   description String
   imageUrl    String?
-  isPublished Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  modules    Module[]
-  userAccess UserCourseAccess[]
-  invites    InviteToken[]
+  isPublished Boolean            @default(false)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  invites     InviteToken[]
+  modules     Module[]
+  userAccess  UserCourseAccess[]
 }
 
 model Module {
-  id          String   @id @default(cuid())
+  id          String           @id @default(cuid())
   courseId    String
   title       String
   description String?
   order       Int
-  isPublished Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  progress ModuleProgress[]
-  lessons  Lesson[]
+  isPublished Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  lessons     Lesson[]
+  course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress    ModuleProgress[]
 }
 
 model Lesson {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   moduleId  String
   title     String
   videoUrl  String?
   order     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  module    Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress  LessonProgress[]
+}
 
-  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  completedAt DateTime @default(now())
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
 }
 
 model UserCourseAccess {
@@ -68,9 +77,8 @@ model UserCourseAccess {
   userId    String
   courseId  String
   grantedAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
 }
@@ -80,9 +88,8 @@ model ModuleProgress {
   userId      String
   moduleId    String
   completedAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, moduleId])
 }
@@ -94,7 +101,6 @@ model InviteToken {
   usedById  String?   @unique
   expiresAt DateTime?
   createdAt DateTime  @default(now())
-
-  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  usedBy  User?  @relation("UsedInvite", fields: [usedById], references: [id])
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  usedBy    User?     @relation("UsedInvite", fields: [usedById], references: [id])
 }

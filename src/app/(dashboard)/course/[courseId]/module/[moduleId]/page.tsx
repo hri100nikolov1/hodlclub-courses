@@ -2,7 +2,6 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
-import CompleteModuleButton from '@/components/CompleteModuleButton'
 import LessonPlayer from '@/components/LessonPlayer'
 
 export default async function ModulePage({
@@ -47,6 +46,16 @@ export default async function ModulePage({
 
   const completedIds = new Set(progress.map((p) => p.moduleId))
 
+  // Fetch lesson-level progress for this module
+  const lessonProgress = await prisma.lessonProgress.findMany({
+    where: {
+      userId: session.userId,
+      lessonId: { in: currentModule.lessons.map((l) => l.id) },
+    },
+    select: { lessonId: true },
+  })
+  const completedLessonIds = lessonProgress.map((lp) => lp.lessonId)
+
   const isLocked = moduleIndex > 0 && !completedIds.has(course.modules[moduleIndex - 1].id)
   if (isLocked) redirect(`/course/${courseId}`)
 
@@ -89,16 +98,14 @@ export default async function ModulePage({
               </div>
             </div>
           ) : (
-            <LessonPlayer lessons={currentModule.lessons} />
+            <LessonPlayer
+              lessons={currentModule.lessons}
+              completedLessonIds={completedLessonIds}
+              moduleId={moduleId}
+              courseId={courseId}
+              nextModuleId={nextModule?.id}
+            />
           )}
-
-          {/* Complete Button */}
-          <CompleteModuleButton
-            moduleId={moduleId}
-            courseId={courseId}
-            isCompleted={isCompleted}
-            nextModuleId={nextModule?.id}
-          />
         </div>
 
         {/* Sidebar - Module List */}

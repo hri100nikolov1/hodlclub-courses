@@ -9,6 +9,14 @@ type Lesson = {
   order: number
 }
 
+type Props = {
+  lessons: Lesson[]
+  completedLessonIds: string[]
+  moduleId: string
+  courseId: string
+  nextModuleId?: string
+}
+
 function getEmbedUrl(url: string): string {
   if (!url) return ''
   if (url.includes('youtube.com/embed/')) return url
@@ -23,10 +31,66 @@ function isGoogleDrive(url: string): boolean {
   return url.includes('drive.google.com')
 }
 
-export default function LessonPlayer({ lessons }: { lessons: Lesson[] }) {
+export default function LessonPlayer({
+  lessons,
+  completedLessonIds,
+  moduleId,
+  courseId,
+  nextModuleId,
+}: Props) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const [completed, setCompleted] = useState<Set<string>>(new Set(completedLessonIds))
+  const [loading, setLoading] = useState(false)
+
   const activeLesson = lessons[activeIndex]
   const embedUrl = activeLesson.videoUrl ? getEmbedUrl(activeLesson.videoUrl) : null
+  const isCurrentDone = completed.has(activeLesson.id)
+  const allDone = lessons.every((l) => completed.has(l.id))
+
+  async function handleComplete() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/lesson-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonId: activeLesson.id }),
+      })
+      if (res.ok) {
+        const newCompleted = new Set(completed)
+        newCompleted.add(activeLesson.id)
+        setCompleted(newCompleted)
+
+        // If there's a next lesson in this module, go to it
+        if (activeIndex < lessons.length - 1) {
+          setTimeout(() => setActiveIndex(activeIndex + 1), 600)
+        }
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleUncomplete() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/lesson-progress', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonId: activeLesson.id }),
+      })
+      if (res.ok) {
+        const newCompleted = new Set(completed)
+        newCompleted.delete(activeLesson.id)
+        setCompleted(newCompleted)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -41,7 +105,6 @@ export default function LessonPlayer({ lessons }: { lessons: Lesson[] }) {
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               title={activeLesson.title}
             />
-            {/* Покрива бутона за сваляне на Google Drive с логото */}
             {activeLesson.videoUrl && isGoogleDrive(activeLesson.videoUrl) && (
               <div
                 className="absolute top-0 right-0 z-10 flex items-center justify-center"
@@ -86,6 +149,74 @@ export default function LessonPlayer({ lessons }: { lessons: Lesson[] }) {
         <span className="text-sm text-gray-400">{activeIndex + 1} / {lessons.length}</span>
       </div>
 
+      {/* Complete Lesson Button */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        {isCurrentDone ? (
+          <>
+            <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl">
+              <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span className="font-medium">Урокът е завършен!</span>
+            </div>
+            <div className="flex gap-2">
+              {activeIndex < lessons.length - 1 && (
+                <button
+                  onClick={() => setActiveIndex(activeIndex + 1)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-3 rounded-xl transition flex items-center gap-2 text-sm"
+                >
+                  Следващ урок
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
+              {allDone && nextModuleId && (
+                <a
+                  href={`/course/${courseId}/module/${nextModuleId}`}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-3 rounded-xl transition flex items-center gap-2 text-sm"
+                >
+                  Следващ модул
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              )}
+              <button
+                onClick={handleUncomplete}
+                disabled={loading}
+                className="text-sm text-gray-400 hover:text-gray-600 disabled:opacity-50 px-3 py-3 rounded-xl border border-gray-200 hover:border-gray-300 transition"
+              >
+                {loading ? '...' : 'Отмаркирай'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <button
+            onClick={handleComplete}
+            disabled={loading}
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-xl transition flex items-center gap-2 shadow-md hover:shadow-lg"
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Запазване...
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Завърших урока
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
       {/* Lessons List (playlist) */}
       {lessons.length > 1 && (
         <div className="bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden">
@@ -93,38 +224,54 @@ export default function LessonPlayer({ lessons }: { lessons: Lesson[] }) {
             Уроци в този модул
           </p>
           <div className="divide-y divide-gray-100">
-            {lessons.map((lesson, index) => (
-              <button
-                key={lesson.id}
-                onClick={() => setActiveIndex(index)}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition ${
-                  index === activeIndex
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'hover:bg-white text-gray-700'
-                }`}
-              >
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
-                  index === activeIndex ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-500'
-                }`}>
-                  {index === activeIndex ? (
-                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                    </svg>
-                  ) : index + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{lesson.title}</p>
-                  {!lesson.videoUrl && (
-                    <p className="text-xs text-gray-400">Скоро</p>
+            {lessons.map((lesson, index) => {
+              const isDone = completed.has(lesson.id)
+              return (
+                <button
+                  key={lesson.id}
+                  onClick={() => setActiveIndex(index)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition ${
+                    index === activeIndex
+                      ? 'bg-indigo-50 text-indigo-700'
+                      : 'hover:bg-white text-gray-700'
+                  }`}
+                >
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                    index === activeIndex
+                      ? 'bg-indigo-600 text-white'
+                      : isDone
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 text-gray-500'
+                  }`}>
+                    {index === activeIndex ? (
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                      </svg>
+                    ) : isDone ? (
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    ) : index + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{lesson.title}</p>
+                    {!lesson.videoUrl && (
+                      <p className="text-xs text-gray-400">Скоро</p>
+                    )}
+                  </div>
+                  {index === activeIndex && (
+                    <span className="text-xs font-medium text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">
+                      Сега
+                    </span>
                   )}
-                </div>
-                {index === activeIndex && (
-                  <span className="text-xs font-medium text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">
-                    Сега
-                  </span>
-                )}
-              </button>
-            ))}
+                  {isDone && index !== activeIndex && (
+                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
+                      ✓
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
