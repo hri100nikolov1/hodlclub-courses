@@ -24,28 +24,41 @@ export default async function CoursePage({
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },
-    include: { modules: { orderBy: { order: 'asc' } } },
+    include: {
+      modules: {
+        orderBy: { order: 'asc' },
+        include: { lessons: { select: { id: true } } },
+      },
+    },
   })
 
   if (!course) notFound()
 
-  const progress = await prisma.moduleProgress.findMany({
+  const moduleProgress = await prisma.moduleProgress.findMany({
     where: { userId: session.userId },
     select: { moduleId: true },
   })
+  const completedModuleIds = new Set(moduleProgress.map((p) => p.moduleId))
 
-  const completedIds = new Set(progress.map((p) => p.moduleId))
+  const lessonProgress = await prisma.lessonProgress.findMany({
+    where: { userId: session.userId },
+    select: { lessonId: true },
+  })
+  const completedLessonIds = new Set(lessonProgress.map((p) => p.lessonId))
 
   const modulesWithState = course.modules.map((mod, index) => {
-    const isCompleted = completedIds.has(mod.id)
+    const isCompleted = completedModuleIds.has(mod.id)
     const prevModule = index === 0 ? null : course.modules[index - 1]
-    const isLocked = index > 0 && !completedIds.has(prevModule!.id)
+    const isLocked = index > 0 && !completedModuleIds.has(prevModule!.id)
     return { ...mod, isLocked, isCompleted }
   })
 
+  const allLessons = course.modules.flatMap((m) => m.lessons)
+  const totalLessons = allLessons.length
+  const completedLessonsCount = allLessons.filter((l) => completedLessonIds.has(l.id)).length
+  const progressPct = totalLessons > 0 ? Math.round((completedLessonsCount / totalLessons) * 100) : 0
   const totalModules = course.modules.length
-  const completedCount = course.modules.filter((m) => completedIds.has(m.id)).length
-  const progressPct = totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0
+  const completedModulesCount = course.modules.filter((m) => completedModuleIds.has(m.id)).length
 
   return (
     <div>
@@ -74,7 +87,7 @@ export default async function CoursePage({
               {totalModules} модула
             </span>
             <span className="bg-white/20 px-3 py-1 rounded-full">
-              {completedCount} завършени
+              {completedLessonsCount}/{totalLessons} урока
             </span>
           </div>
 
