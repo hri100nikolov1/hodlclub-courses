@@ -44,13 +44,24 @@ export default function LessonPlayer({ lessons }: { lessons: Lesson[] }) {
             {/* Покрива бутона за сваляне на Google Drive с логото */}
             {activeLesson.videoUrl && isGoogleDrive(activeLesson.videoUrl) && (
               <div
-                className="absolute top-0 right-0 z-10 flex items-center justify-end"
-                style={{ width: '220px', height: '50px', background: 'linear-gradient(to left, rgba(0,0,0,0.7) 60%, transparent)' }}
+                className="absolute top-0 right-0 z-10 flex items-center justify-center"
+                style={{
+                  width: '72px',
+                  height: '72px',
+                  background: '#111',
+                  borderBottomLeftRadius: '100%',
+                }}
               >
                 <img
                   src="/logo.png"
                   alt="HODLClub"
-                  style={{ height: '32px', width: 'auto', opacity: 0.55, marginRight: '10px' }}
+                  style={{
+                    height: '36px',
+                    width: '36px',
+                    objectFit: 'contain',
+                    marginTop: '-12px',
+                    marginRight: '-12px',
+                  }}
                 />
               </div>
             )}
