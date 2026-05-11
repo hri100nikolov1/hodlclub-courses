@@ -56,6 +56,12 @@ export default async function ModulePage({
   })
   const completedLessonIds = lessonProgress.map((lp) => lp.lessonId)
 
+  // Fetch quizzes for lessons in this module
+  const quizzes = await prisma.quiz.findMany({
+    where: { lessonId: { in: currentModule.lessons.map((l) => l.id) } },
+    include: { questions: { orderBy: { order: 'asc' } } },
+  })
+
   const isLocked = moduleIndex > 0 && !completedIds.has(course.modules[moduleIndex - 1].id)
   if (isLocked) redirect(`/course/${courseId}`)
 
@@ -104,6 +110,16 @@ export default async function ModulePage({
               moduleId={moduleId}
               courseId={courseId}
               nextModuleId={nextModule?.id}
+              quizzes={quizzes.map(q => ({
+                lessonId: q.lessonId,
+                questions: q.questions.map(qq => ({
+                  id: qq.id,
+                  text: qq.text,
+                  options: qq.options as string[],
+                  correctIndex: qq.correctIndex,
+                  order: qq.order,
+                }))
+              }))}
             />
           )}
         </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import QuizPlayer from './QuizPlayer'
 
 type Lesson = {
   id: string
@@ -9,12 +10,26 @@ type Lesson = {
   order: number
 }
 
+type QuizQuestion = {
+  id: string
+  text: string
+  options: string[]
+  correctIndex: number
+  order: number
+}
+
+type Quiz = {
+  lessonId: string
+  questions: QuizQuestion[]
+}
+
 type Props = {
   lessons: Lesson[]
   completedLessonIds: string[]
   moduleId: string
   courseId: string
   nextModuleId?: string
+  quizzes?: Quiz[]
 }
 
 function getEmbedUrl(url: string): string {
@@ -37,6 +52,7 @@ export default function LessonPlayer({
   moduleId,
   courseId,
   nextModuleId,
+  quizzes = [],
 }: Props) {
   const [activeIndex, setActiveIndex] = useState(0)
   const [completed, setCompleted] = useState<Set<string>>(new Set(completedLessonIds))
@@ -45,6 +61,7 @@ export default function LessonPlayer({
   const activeLesson = lessons[activeIndex]
   const embedUrl = activeLesson.videoUrl ? getEmbedUrl(activeLesson.videoUrl) : null
   const isCurrentDone = completed.has(activeLesson.id)
+  const activeQuiz = quizzes.find(q => q.lessonId === activeLesson.id)
   const allDone = lessons.every((l) => completed.has(l.id))
 
   async function handleComplete() {
@@ -216,6 +233,11 @@ export default function LessonPlayer({
           </button>
         )}
       </div>
+
+      {/* Quiz */}
+      {activeQuiz && (
+        <QuizPlayer key={activeLesson.id} questions={activeQuiz.questions} />
+      )}
 
       {/* Lessons List (playlist) */}
       {lessons.length > 1 && (

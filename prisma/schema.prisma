@@ -59,6 +59,24 @@ model Lesson {
   updatedAt DateTime         @updatedAt
   module    Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   progress  LessonProgress[]
+  quiz      Quiz?
+}
+
+model Quiz {
+  id        String         @id @default(cuid())
+  lessonId  String         @unique
+  lesson    Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions QuizQuestion[]
+}
+
+model QuizQuestion {
+  id           String @id @default(cuid())
+  quizId       String
+  text         String
+  options      Json
+  correctIndex Int
+  order        Int
+  quiz         Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
 }
 
 model LessonProgress {

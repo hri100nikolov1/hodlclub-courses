@@ -1,0 +1,201 @@
+'use client'
+
+import { useState } from 'react'
+
+type Question = {
+  id: string
+  text: string
+  options: string[]
+  correctIndex: number
+  order: number
+}
+
+export default function QuizPlayer({ questions }: { questions: Question[] }) {
+  const [answers, setAnswers] = useState<(number | null)[]>(Array(questions.length).fill(null))
+  const [submitted, setSubmitted] = useState(false)
+  const [current, setCurrent] = useState(0)
+
+  const sorted = [...questions].sort((a, b) => a.order - b.order)
+  const q = sorted[current]
+  const selected = answers[current]
+  const isLast = current === sorted.length - 1
+  const allAnswered = answers.every((a) => a !== null)
+
+  function select(idx: number) {
+    if (submitted) return
+    const next = [...answers]
+    next[current] = idx
+    setAnswers(next)
+  }
+
+  function handleSubmit() {
+    setSubmitted(true)
+    setCurrent(0)
+  }
+
+  function handleReset() {
+    setAnswers(Array(questions.length).fill(null))
+    setSubmitted(false)
+    setCurrent(0)
+  }
+
+  const score = submitted
+    ? sorted.filter((q, i) => answers[i] === q.correctIndex).length
+    : 0
+
+  const pct = submitted ? Math.round((score / sorted.length) * 100) : 0
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-white">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-bold">Тест за разбиране</span>
+          </div>
+          {!submitted && (
+            <span className="text-indigo-200 text-sm">
+              {current + 1} / {sorted.length}
+            </span>
+          )}
+        </div>
+
+        {/* Progress dots */}
+        {!submitted && (
+          <div className="flex gap-1.5 mt-3">
+            {sorted.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrent(i)}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === current
+                    ? 'bg-white w-6'
+                    : answers[i] !== null
+                    ? 'bg-indigo-300 w-3'
+                    : 'bg-indigo-400/50 w-3'
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="p-6">
+        {!submitted ? (
+          <>
+            {/* Question */}
+            <p className="font-semibold text-gray-900 text-base mb-4">
+              {current + 1}. {q.text}
+            </p>
+
+            {/* Options */}
+            <div className="space-y-2 mb-6">
+              {(q.options as string[]).map((opt, i) => (
+                <button
+                  key={i}
+                  onClick={() => select(i)}
+                  className={`w-full text-left px-4 py-3 rounded-xl border-2 transition text-sm font-medium ${
+                    selected === i
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  <span className={`inline-flex w-6 h-6 rounded-full items-center justify-center text-xs mr-2 flex-shrink-0 ${
+                    selected === i ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-500'
+                  }`}>
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  {opt}
+                </button>
+              ))}
+            </div>
+
+            {/* Navigation */}
+            <div className="flex gap-3">
+              {current > 0 && (
+                <button
+                  onClick={() => setCurrent(current - 1)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium transition"
+                >
+                  ← Назад
+                </button>
+              )}
+              {!isLast ? (
+                <button
+                  onClick={() => setCurrent(current + 1)}
+                  disabled={selected === null}
+                  className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition"
+                >
+                  Напред →
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={!allAnswered}
+                  className="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition"
+                >
+                  Предай теста ✓
+                </button>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Results */}
+            <div className="text-center mb-6">
+              <div className={`text-5xl font-black mb-1 ${
+                pct >= 80 ? 'text-green-600' : pct >= 60 ? 'text-yellow-500' : 'text-red-500'
+              }`}>
+                {score}/{sorted.length}
+              </div>
+              <p className="text-gray-500 text-sm">{pct}% верни отговори</p>
+              {pct === 100 && <p className="text-green-600 font-semibold mt-1">🎉 Перфектен резултат!</p>}
+              {pct >= 60 && pct < 100 && <p className="text-yellow-600 font-semibold mt-1">👍 Добре се справи!</p>}
+              {pct < 60 && <p className="text-red-500 font-semibold mt-1">Прегледай урока и опитай отново.</p>}
+            </div>
+
+            {/* Answer review */}
+            <div className="space-y-4 mb-6">
+              {sorted.map((q, i) => {
+                const userAnswer = answers[i]
+                const isCorrect = userAnswer === q.correctIndex
+                return (
+                  <div key={q.id} className={`rounded-xl p-4 ${isCorrect ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                    <div className="flex items-start gap-2 mb-2">
+                      <span className={`text-lg flex-shrink-0 ${isCorrect ? 'text-green-600' : 'text-red-500'}`}>
+                        {isCorrect ? '✓' : '✗'}
+                      </span>
+                      <p className="text-sm font-semibold text-gray-800">{q.text}</p>
+                    </div>
+                    {!isCorrect && (
+                      <div className="ml-7 space-y-1">
+                        {userAnswer !== null && (
+                          <p className="text-xs text-red-600">
+                            Твоят отговор: <span className="font-medium">{(q.options as string[])[userAnswer]}</span>
+                          </p>
+                        )}
+                        <p className="text-xs text-green-700">
+                          Верен отговор: <span className="font-medium">{(q.options as string[])[q.correctIndex]}</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            <button
+              onClick={handleReset}
+              className="w-full py-2.5 rounded-xl border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-sm font-medium transition"
+            >
+              Опитай отново
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
