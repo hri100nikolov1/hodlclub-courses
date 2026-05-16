@@ -7,11 +7,37 @@ export default async function AdminPage() {
   const session = await getSession()
   if (!session || session.role !== 'admin') redirect('/login')
 
-  const [coursesCount, usersCount, unusedInvites] = await Promise.all([
+  const [coursesCount, usersCount, unusedInvites, totalCompletions, mostCompletedGroup, allStudentIds, studentsWithProgress] = await Promise.all([
     prisma.course.count(),
     prisma.user.count({ where: { role: 'student' } }),
     prisma.inviteToken.count({ where: { usedById: null } }),
+    prisma.lessonProgress.count(),
+    prisma.lessonProgress.groupBy({
+      by: ['lessonId'],
+      _count: { lessonId: true },
+      orderBy: { _count: { lessonId: 'desc' } },
+      take: 1,
+    }),
+    prisma.user.findMany({ where: { role: 'student' }, select: { id: true } }),
+    prisma.lessonProgress.findMany({ select: { userId: true }, distinct: ['userId'] }),
   ])
+
+  // Most completed lesson title
+  let mostCompletedTitle = '—'
+  if (mostCompletedGroup.length > 0) {
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: mostCompletedGroup[0].lessonId },
+      select: { title: true },
+    })
+    if (lesson) mostCompletedTitle = lesson.title
+  }
+
+  // Students with 0 progress
+  const studentsWithProgressIds = new Set(studentsWithProgress.map((p) => p.userId))
+  const studentsWithoutProgress = allStudentIds.filter((u) => !studentsWithProgressIds.has(u.id)).length
+
+  // Average lessons per student
+  const avgLessons = usersCount > 0 ? (totalCompletions / usersCount).toFixed(1) : '0.0'
 
   const recentUsers = await prisma.user.findMany({
     where: { role: 'student' },
@@ -48,6 +74,32 @@ export default async function AdminPage() {
             </div>
           </Link>
         ))}
+      </div>
+
+      {/* Analytics */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8 shadow-sm">
+        <h2 className="font-bold text-gray-900 mb-5 text-lg">Аналитики на обучението</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <p className="text-sm text-gray-500 mb-1">Завършени урока общо</p>
+            <p className="text-3xl font-bold text-gray-900">{totalCompletions}</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <p className="text-sm text-gray-500 mb-1">Средно урока на студент</p>
+            <p className="text-3xl font-bold text-gray-900">{avgLessons}</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <p className="text-sm text-gray-500 mb-1">Студенти без прогрес</p>
+            <p className="text-3xl font-bold text-gray-900">{studentsWithoutProgress}</p>
+          </div>
+        </div>
+        {mostCompletedGroup.length > 0 && (
+          <div className="mt-4 bg-indigo-50 rounded-xl p-4 border border-indigo-100">
+            <p className="text-sm text-indigo-500 mb-0.5">Най-завършван урок</p>
+            <p className="font-semibold text-indigo-900">{mostCompletedTitle}</p>
+            <p className="text-xs text-indigo-400 mt-0.5">{mostCompletedGroup[0]._count.lessonId} завършвания</p>
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}

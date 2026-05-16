@@ -16,10 +16,11 @@ model User {
   role           String             @default("student")
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
-  usedInvite      InviteToken?       @relation("UsedInvite")
-  moduleProgress  ModuleProgress[]
-  lessonProgress  LessonProgress[]
-  courseAccess    UserCourseAccess[]
+  usedInvite           InviteToken?        @relation("UsedInvite")
+  moduleProgress       ModuleProgress[]
+  lessonProgress       LessonProgress[]
+  courseAccess         UserCourseAccess[]
+  passwordResetTokens  PasswordResetToken[]
 }
 
 model Course {
@@ -121,4 +122,14 @@ model InviteToken {
   createdAt DateTime  @default(now())
   course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
   usedBy    User?     @relation("UsedInvite", fields: [usedById], references: [id])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique @default(cuid())
+  userId    String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

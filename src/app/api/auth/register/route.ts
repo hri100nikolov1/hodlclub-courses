@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { createSession, setSessionCookie } from '@/lib/session'
+import { sendWelcomeEmail } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,6 +56,9 @@ export async function POST(request: NextRequest) {
       where: { token },
       data: { usedById: user.id },
     })
+
+    // Send welcome email (don't await - don't block registration if email fails)
+    sendWelcomeEmail(user.email, user.name).catch(console.error)
 
     const sessionToken = await createSession({
       userId: user.id,

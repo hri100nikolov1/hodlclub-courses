@@ -11,6 +11,58 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState('')
   const [deleting, setDeleting] = useState(false)
 
+  // Change password state
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
+
+  async function handleChangePassword() {
+    setPasswordError('')
+    setPasswordSuccess(false)
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setPasswordError('Всички полета са задължителни')
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError('Новата парола трябва да е поне 6 символа')
+      return
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('Новите пароли не съвпадат')
+      return
+    }
+
+    setChangingPassword(true)
+    try {
+      const res = await fetch('/api/user/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setPasswordError(data.error || 'Грешка при смяна на паролата')
+        return
+      }
+
+      setPasswordSuccess(true)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmNewPassword('')
+    } catch {
+      setPasswordError('Нещо се обърка. Опитайте отново.')
+    } finally {
+      setChangingPassword(false)
+    }
+  }
+
   async function handleDeleteAccount() {
     if (!deletePassword) {
       setDeleteError('Въведете паролата си за потвърждение')
@@ -63,6 +115,63 @@ export default function SettingsPage() {
           </svg>
           Прочетете Политиката за поверителност
         </Link>
+      </div>
+
+      {/* Смяна на парола */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">Смяна на парола</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Въведете текущата си парола и изберете нова.
+        </p>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Текуща парола</label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="Въведете текущата парола"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50 text-gray-900 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Нова парола</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Минимум 6 символа"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50 text-gray-900 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Потвърди нова парола</label>
+            <input
+              type="password"
+              value={confirmNewPassword}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+              placeholder="Повторете новата парола"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50 text-gray-900 text-sm"
+              onKeyDown={(e) => e.key === 'Enter' && handleChangePassword()}
+            />
+          </div>
+
+          {passwordError && (
+            <p className="text-red-600 text-sm">{passwordError}</p>
+          )}
+          {passwordSuccess && (
+            <p className="text-green-600 text-sm font-medium">Паролата е сменена успешно!</p>
+          )}
+
+          <button
+            onClick={handleChangePassword}
+            disabled={changingPassword}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-medium text-sm px-4 py-2.5 rounded-xl transition"
+          >
+            {changingPassword ? 'Запазване...' : 'Смени паролата'}
+          </button>
+        </div>
       </div>
 
       {/* Опасна зона */}

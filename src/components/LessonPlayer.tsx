@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import QuizPlayer from './QuizPlayer'
 
 type Lesson = {
@@ -32,19 +32,44 @@ type Props = {
   quizzes?: Quiz[]
 }
 
-function getEmbedUrl(url: string): string {
-  if (!url) return ''
-  if (url.includes('youtube.com/embed/')) return url
-  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/)
-  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?rel=0`
-  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/)
-  if (driveMatch) return `https://drive.google.com/file/d/${driveMatch[1]}/preview`
-  return url
+// YouTube player types
+declare global {
+  interface Window {
+    YT: {
+      Player: new (
+        el: string | HTMLElement,
+        opts: {
+          videoId?: string
+          playerVars?: Record<string, number | string>
+          events?: {
+            onStateChange?: (e: { data: number }) => void
+            onReady?: () => void
+          }
+        }
+      ) => YTPlayerInstance
+      PlayerState: { PLAYING: number; PAUSED: number; ENDED: number }
+    }
+    onYouTubeIframeAPIReady: () => void
+  }
 }
 
-function isGoogleDrive(url: string): boolean {
-  return url.includes('drive.google.com')
+interface YTPlayerInstance {
+  getCurrentTime(): number
+  getDuration(): number
+  destroy(): void
 }
+
+function getYouTubeVideoId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/)
+  return m ? m[1] : null
+}
+
+function getGoogleDriveEmbedUrl(url: string): string | null {
+  const m = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/)
+  return m ? `https://drive.google.com/file/d/${m[1]}/preview` : null
+}
+
+const MIN_WATCH_PERCENT = 80 // % of video to watch before "done" unlocks
 
 export default function LessonPlayer({
   lessons,
@@ -57,12 +82,114 @@ export default function LessonPlayer({
   const [activeIndex, setActiveIndex] = useState(0)
   const [completed, setCompleted] = useState<Set<string>>(new Set(completedLessonIds))
   const [loading, setLoading] = useState(false)
+  const [videoProgress, setVideoProgress] = useState(0) // 0–100
+  const [showModules, setShowModules] = useState(false)
+
+  const playerRef = useRef<YTPlayerInstance | null>(null)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const ytApiLoaded = useRef(false)
 
   const activeLesson = lessons[activeIndex]
-  const embedUrl = activeLesson.videoUrl ? getEmbedUrl(activeLesson.videoUrl) : null
   const isCurrentDone = completed.has(activeLesson.id)
-  const activeQuiz = quizzes.find(q => q.lessonId === activeLesson.id)
+  const activeQuiz = quizzes.find((q) => q.lessonId === activeLesson.id)
   const allDone = lessons.every((l) => completed.has(l.id))
+
+  const ytVideoId = activeLesson.videoUrl ? getYouTubeVideoId(activeLesson.videoUrl) : null
+  const driveEmbedUrl = activeLesson.videoUrl ? getGoogleDriveEmbedUrl(activeLesson.videoUrl) : null
+  const isYouTube = !!ytVideoId
+  const isGoogleDrive = !!driveEmbedUrl
+  const hasVideo = isYouTube || isGoogleDrive
+
+  // Button unlocks when: already done, or Google Drive, or watched >= MIN_WATCH_PERCENT
+  const canMarkDone = isCurrentDone || !isYouTube || videoProgress >= MIN_WATCH_PERCENT
+
+  // ── YouTube Player lifecycle ──────────────────────────────────────────────
+  function startProgressPolling(player: YTPlayerInstance) {
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    intervalRef.current = setInterval(() => {
+      try {
+        const cur = player.getCurrentTime()
+        const dur = player.getDuration()
+        if (dur > 0) setVideoProgress(Math.round((cur / dur) * 100))
+      } catch {
+        // player may be destroyed
+      }
+    }, 2000)
+  }
+
+  function createYTPlayer(videoId: string) {
+    const divId = `yt-player-${activeLesson.id}`
+    if (!document.getElementById(divId)) return
+
+    playerRef.current = new window.YT.Player(divId, {
+      videoId,
+      playerVars: { rel: 0, modestbranding: 1 },
+      events: {
+        onStateChange: (e) => {
+          if (e.data === 1 /* PLAYING */) {
+            startProgressPolling(playerRef.current!)
+          } else {
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current)
+              intervalRef.current = null
+            }
+          }
+        },
+      },
+    })
+  }
+
+  // Load the YouTube iframe API script once
+  useEffect(() => {
+    if (ytApiLoaded.current || !isYouTube) return
+    ytApiLoaded.current = true
+
+    if (window.YT && window.YT.Player) return // already loaded
+
+    const script = document.createElement('script')
+    script.src = 'https://www.youtube.com/iframe_api'
+    script.async = true
+    document.head.appendChild(script)
+  }, [isYouTube])
+
+  // Create / destroy YT player when active lesson changes
+  useEffect(() => {
+    // Clean up previous player
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    playerRef.current?.destroy()
+    playerRef.current = null
+    setVideoProgress(0)
+
+    if (!ytVideoId) return
+
+    const tryCreate = () => {
+      if (window.YT && window.YT.Player) {
+        createYTPlayer(ytVideoId)
+      } else {
+        const prev = window.onYouTubeIframeAPIReady
+        window.onYouTubeIframeAPIReady = () => {
+          prev?.()
+          createYTPlayer(ytVideoId)
+        }
+      }
+    }
+
+    // Small delay to let the div render
+    const t = setTimeout(tryCreate, 100)
+    return () => {
+      clearTimeout(t)
+      if (intervalRef.current) clearInterval(intervalRef.current)
+      playerRef.current?.destroy()
+      playerRef.current = null
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLesson.id])
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+  function changeLesson(index: number) {
+    setActiveIndex(index)
+    setShowModules(false)
+  }
 
   async function handleComplete() {
     setLoading(true)
@@ -73,13 +200,11 @@ export default function LessonPlayer({
         body: JSON.stringify({ lessonId: activeLesson.id }),
       })
       if (res.ok) {
-        const newCompleted = new Set(completed)
-        newCompleted.add(activeLesson.id)
-        setCompleted(newCompleted)
-
-        // If there's a next lesson in this module, go to it
+        const next = new Set(completed)
+        next.add(activeLesson.id)
+        setCompleted(next)
         if (activeIndex < lessons.length - 1) {
-          setTimeout(() => setActiveIndex(activeIndex + 1), 600)
+          setTimeout(() => changeLesson(activeIndex + 1), 600)
         }
       }
     } catch (err) {
@@ -98,9 +223,9 @@ export default function LessonPlayer({
         body: JSON.stringify({ lessonId: activeLesson.id }),
       })
       if (res.ok) {
-        const newCompleted = new Set(completed)
-        newCompleted.delete(activeLesson.id)
-        setCompleted(newCompleted)
+        const next = new Set(completed)
+        next.delete(activeLesson.id)
+        setCompleted(next)
       }
     } catch (err) {
       console.error(err)
@@ -109,110 +234,152 @@ export default function LessonPlayer({
     }
   }
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
-      {/* Video Player */}
-      {embedUrl ? (
+
+      {/* ── Video Player ── */}
+      {hasVideo ? (
         <div className="bg-black rounded-2xl overflow-hidden shadow-lg">
           <div className="relative" style={{ paddingTop: '56.25%' }}>
-            <iframe
-              src={embedUrl}
-              className="absolute inset-0 w-full h-full"
-              allowFullScreen
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              title={activeLesson.title}
-            />
-            {activeLesson.videoUrl && isGoogleDrive(activeLesson.videoUrl) && (
+
+            {/* YouTube — div replaced by YT.Player */}
+            {isYouTube && (
               <div
-                className="absolute top-0 right-0 z-10 flex items-center justify-center"
-                style={{
-                  width: '72px',
-                  height: '72px',
-                  background: '#111',
-                  borderBottomLeftRadius: '100%',
-                }}
-              >
-                <img
-                  src="/logo.png"
-                  alt="HODLClub"
-                  style={{
-                    height: '36px',
-                    width: '36px',
-                    objectFit: 'contain',
-                    marginTop: '-12px',
-                    marginRight: '-12px',
-                  }}
+                id={`yt-player-${activeLesson.id}`}
+                className="absolute inset-0 w-full h-full"
+              />
+            )}
+
+            {/* Google Drive */}
+            {isGoogleDrive && (
+              <>
+                <iframe
+                  src={driveEmbedUrl!}
+                  className="absolute inset-0 w-full h-full"
+                  allowFullScreen
+                  allow="autoplay"
+                  title={activeLesson.title}
                 />
-              </div>
+                {/* HODLClub watermark */}
+                <div
+                  className="absolute top-0 right-0 z-10 flex items-center justify-center"
+                  style={{
+                    width: '72px',
+                    height: '72px',
+                    background: '#111',
+                    borderBottomLeftRadius: '100%',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <img
+                    src="/logo.png"
+                    alt="HODLClub"
+                    style={{
+                      height: '36px',
+                      width: '36px',
+                      objectFit: 'contain',
+                      marginTop: '-12px',
+                      marginRight: '-12px',
+                    }}
+                  />
+                </div>
+              </>
             )}
           </div>
+
+          {/* YouTube progress bar */}
+          {isYouTube && videoProgress > 0 && (
+            <div className="h-1 bg-gray-800">
+              <div
+                className="h-full bg-indigo-500 transition-all duration-1000"
+                style={{ width: `${videoProgress}%` }}
+              />
+            </div>
+          )}
         </div>
       ) : (
-        <div className="bg-gray-100 rounded-2xl flex items-center justify-center h-64">
+        <div className="bg-gray-100 rounded-2xl flex items-center justify-center h-48 sm:h-64">
           <div className="text-center text-gray-400">
             <svg className="w-12 h-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
-            <p>Видеото ще бъде добавено скоро</p>
+            <p className="text-sm">Видеото ще бъде добавено скоро</p>
           </div>
         </div>
       )}
 
-      {/* Active Lesson Title */}
+      {/* ── Lesson Title ── */}
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-gray-900">
+        <h2 className="font-semibold text-gray-900 text-sm sm:text-base">
           {activeIndex + 1}. {activeLesson.title}
         </h2>
-        <span className="text-sm text-gray-400">{activeIndex + 1} / {lessons.length}</span>
+        <span className="text-sm text-gray-400 flex-shrink-0 ml-2">{activeIndex + 1} / {lessons.length}</span>
       </div>
 
-      {/* Complete Lesson Button */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+      {/* ── YouTube watch hint ── */}
+      {isYouTube && !isCurrentDone && videoProgress < MIN_WATCH_PERCENT && (
+        <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2.5 rounded-xl">
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>
+            Изгледайте поне {MIN_WATCH_PERCENT}% от видеото, за да отключите бутона.
+            {videoProgress > 0 && ` (${videoProgress}% изгледано)`}
+          </span>
+        </div>
+      )}
+
+      {/* ── Complete Button ── */}
+      <div className="flex flex-wrap gap-2 items-center">
         {isCurrentDone ? (
           <>
-            <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl">
+            <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-2.5 rounded-xl text-sm">
               <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               <span className="font-medium">Урокът е завършен!</span>
             </div>
-            <div className="flex gap-2">
-              {activeIndex < lessons.length - 1 && (
-                <button
-                  onClick={() => setActiveIndex(activeIndex + 1)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-3 rounded-xl transition flex items-center gap-2 text-sm"
-                >
-                  Следващ урок
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              )}
-              {allDone && nextModuleId && (
-                <a
-                  href={`/course/${courseId}/module/${nextModuleId}`}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-3 rounded-xl transition flex items-center gap-2 text-sm"
-                >
-                  Следващ модул
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </a>
-              )}
+
+            {activeIndex < lessons.length - 1 && (
               <button
-                onClick={handleUncomplete}
-                disabled={loading}
-                className="text-sm text-gray-400 hover:text-gray-600 disabled:opacity-50 px-3 py-3 rounded-xl border border-gray-200 hover:border-gray-300 transition"
+                onClick={() => changeLesson(activeIndex + 1)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 text-sm"
               >
-                {loading ? '...' : 'Отмаркирай'}
+                Следващ урок
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </button>
-            </div>
+            )}
+
+            {allDone && nextModuleId && (
+              <a
+                href={`/course/${courseId}/module/${nextModuleId}`}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 text-sm"
+              >
+                Следващ модул
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+            )}
+
+            <button
+              onClick={handleUncomplete}
+              disabled={loading}
+              className="text-sm text-gray-400 hover:text-gray-600 disabled:opacity-50 px-3 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 transition"
+            >
+              {loading ? '...' : 'Отмаркирай'}
+            </button>
           </>
         ) : (
           <button
             onClick={handleComplete}
-            disabled={loading}
-            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-xl transition flex items-center gap-2 shadow-md hover:shadow-lg"
+            disabled={loading || !canMarkDone}
+            title={!canMarkDone ? `Изгледайте поне ${MIN_WATCH_PERCENT}% от видеото` : undefined}
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-md hover:shadow-lg text-sm"
           >
             {loading ? (
               <>
@@ -234,12 +401,12 @@ export default function LessonPlayer({
         )}
       </div>
 
-      {/* Quiz */}
+      {/* ── Quiz ── */}
       {activeQuiz && (
         <QuizPlayer key={activeLesson.id} questions={activeQuiz.questions} />
       )}
 
-      {/* Lessons List (playlist) */}
+      {/* ── Lesson Playlist ── */}
       {lessons.length > 1 && (
         <div className="bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden">
           <p className="text-xs font-semibold text-gray-500 px-4 pt-3 pb-2 uppercase tracking-wide">
@@ -251,7 +418,7 @@ export default function LessonPlayer({
               return (
                 <button
                   key={lesson.id}
-                  onClick={() => setActiveIndex(index)}
+                  onClick={() => changeLesson(index)}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left transition ${
                     index === activeIndex
                       ? 'bg-indigo-50 text-indigo-700'
@@ -282,12 +449,12 @@ export default function LessonPlayer({
                     )}
                   </div>
                   {index === activeIndex && (
-                    <span className="text-xs font-medium text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-medium text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full flex-shrink-0">
                       Сега
                     </span>
                   )}
                   {isDone && index !== activeIndex && (
-                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full flex-shrink-0">
                       ✓
                     </span>
                   )}
@@ -298,25 +465,25 @@ export default function LessonPlayer({
         </div>
       )}
 
-      {/* Navigation buttons */}
+      {/* ── Prev / Next Buttons ── */}
       {lessons.length > 1 && (
-        <div className="flex gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={() => setActiveIndex(Math.max(0, activeIndex - 1))}
+            onClick={() => changeLesson(Math.max(0, activeIndex - 1))}
             disabled={activeIndex === 0}
-            className="flex-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed text-gray-700 font-medium py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-1"
+            className="bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed text-gray-700 font-medium py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Предишен урок
+            Предишен
           </button>
           <button
-            onClick={() => setActiveIndex(Math.min(lessons.length - 1, activeIndex + 1))}
+            onClick={() => changeLesson(Math.min(lessons.length - 1, activeIndex + 1))}
             disabled={activeIndex === lessons.length - 1}
-            className="flex-1 bg-indigo-100 hover:bg-indigo-200 disabled:opacity-40 disabled:cursor-not-allowed text-indigo-700 font-medium py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-1"
+            className="bg-indigo-100 hover:bg-indigo-200 disabled:opacity-40 disabled:cursor-not-allowed text-indigo-700 font-medium py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-1"
           >
-            Следващ урок
+            Следващ
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
