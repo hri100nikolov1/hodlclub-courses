@@ -95,6 +95,15 @@ export default function LessonPlayer({
   const [videoProgress, setVideoProgress] = useState(0) // 0–100
   const [showModules, setShowModules] = useState(false)
 
+  // Local quiz attempts state — initialized from server, updated after each submission
+  const [localAttempts, setLocalAttempts] = useState<Record<string, QuizAttempt>>(
+    () => Object.fromEntries(quizAttempts.map((a) => [a.quizId, a]))
+  )
+
+  function handleAttemptSaved(attempt: QuizAttempt) {
+    setLocalAttempts((prev) => ({ ...prev, [attempt.quizId]: attempt }))
+  }
+
   const playerRef = useRef<YTPlayerInstance | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const ytApiLoaded = useRef(false)
@@ -417,7 +426,8 @@ export default function LessonPlayer({
           key={activeLesson.id}
           quizId={activeQuiz.id}
           questions={activeQuiz.questions}
-          previousAttempt={quizAttempts.find(a => a.quizId === activeQuiz.id) ?? null}
+          previousAttempt={localAttempts[activeQuiz.id] ?? null}
+          onAttemptSaved={handleAttemptSaved}
         />
       )}
 

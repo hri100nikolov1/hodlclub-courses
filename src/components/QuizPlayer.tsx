@@ -20,9 +20,10 @@ type Props = {
   questions: Question[]
   quizId: string
   previousAttempt?: PreviousAttempt | null
+  onAttemptSaved?: (attempt: { quizId: string; answers: number[]; score: number; total: number }) => void
 }
 
-export default function QuizPlayer({ questions, quizId, previousAttempt }: Props) {
+export default function QuizPlayer({ questions, quizId, previousAttempt, onAttemptSaved }: Props) {
   const sorted = [...questions].sort((a, b) => a.order - b.order)
 
   const [answers, setAnswers] = useState<(number | null)[]>(
@@ -63,6 +64,7 @@ export default function QuizPlayer({ questions, quizId, previousAttempt }: Props
           total: sorted.length,
         }),
       })
+      onAttemptSaved?.({ quizId, answers: answers as number[], score: finalScore, total: sorted.length })
     } catch (err) {
       console.error('Failed to save quiz attempt:', err)
     } finally {
