@@ -1,11 +1,17 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = 'HODLClub <noreply@hodlclub.bg>'
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://courses.hodlclub.eu'
 
+function getResend(): Resend | null {
+  const key = process.env.RESEND_API_KEY
+  if (!key || key.startsWith('re_placeholder')) return null
+  return new Resend(key)
+}
+
 export async function sendWelcomeEmail(to: string, name: string) {
-  if (!process.env.RESEND_API_KEY) return
+  const resend = getResend()
+  if (!resend) return
   await resend.emails.send({
     from: FROM,
     to,
@@ -29,7 +35,8 @@ export async function sendWelcomeEmail(to: string, name: string) {
 }
 
 export async function sendPasswordResetEmail(to: string, resetToken: string) {
-  if (!process.env.RESEND_API_KEY) return
+  const resend = getResend()
+  if (!resend) return
   const resetUrl = `${BASE_URL}/reset-password?token=${resetToken}`
   await resend.emails.send({
     from: FROM,
