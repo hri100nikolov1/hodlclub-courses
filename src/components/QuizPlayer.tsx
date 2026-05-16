@@ -10,16 +10,37 @@ type Question = {
   order: number
 }
 
-export default function QuizPlayer({ questions }: { questions: Question[] }) {
-  const [answers, setAnswers] = useState<(number | null)[]>(Array(questions.length).fill(null))
-  const [submitted, setSubmitted] = useState(false)
-  const [current, setCurrent] = useState(0)
+type PreviousAttempt = {
+  answers: number[]
+  score: number
+  total: number
+}
 
+type Props = {
+  questions: Question[]
+  quizId: string
+  previousAttempt?: PreviousAttempt | null
+}
+
+export default function QuizPlayer({ questions, quizId, previousAttempt }: Props) {
   const sorted = [...questions].sort((a, b) => a.order - b.order)
+
+  const [answers, setAnswers] = useState<(number | null)[]>(
+    previousAttempt ? previousAttempt.answers : Array(sorted.length).fill(null)
+  )
+  const [submitted, setSubmitted] = useState(!!previousAttempt)
+  const [current, setCurrent] = useState(0)
+  const [saving, setSaving] = useState(false)
+
   const q = sorted[current]
   const selected = answers[current]
   const isLast = current === sorted.length - 1
   const allAnswered = answers.every((a) => a !== null)
+
+  const score = submitted
+    ? sorted.filter((q, i) => answers[i] === q.correctIndex).length
+    : 0
+  const pct = submitted ? Math.round((score / sorted.length) * 100) : 0
 
   function select(idx: number) {
     if (submitted) return
@@ -28,22 +49,34 @@ export default function QuizPlayer({ questions }: { questions: Question[] }) {
     setAnswers(next)
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
+    setSaving(true)
+    const finalScore = sorted.filter((q, i) => answers[i] === q.correctIndex).length
+    try {
+      await fetch('/api/quiz-attempt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quizId,
+          answers,
+          score: finalScore,
+          total: sorted.length,
+        }),
+      })
+    } catch (err) {
+      console.error('Failed to save quiz attempt:', err)
+    } finally {
+      setSaving(false)
+    }
     setSubmitted(true)
     setCurrent(0)
   }
 
   function handleReset() {
-    setAnswers(Array(questions.length).fill(null))
+    setAnswers(Array(sorted.length).fill(null))
     setSubmitted(false)
     setCurrent(0)
   }
-
-  const score = submitted
-    ? sorted.filter((q, i) => answers[i] === q.correctIndex).length
-    : 0
-
-  const pct = submitted ? Math.round((score / sorted.length) * 100) : 0
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
@@ -60,6 +93,9 @@ export default function QuizPlayer({ questions }: { questions: Question[] }) {
             <span className="text-indigo-200 text-sm">
               {current + 1} / {sorted.length}
             </span>
+          )}
+          {submitted && previousAttempt && (
+            <span className="text-indigo-200 text-xs">Предишен резултат</span>
           )}
         </div>
 
@@ -134,10 +170,10 @@ export default function QuizPlayer({ questions }: { questions: Question[] }) {
               ) : (
                 <button
                   onClick={handleSubmit}
-                  disabled={!allAnswered}
+                  disabled={!allAnswered || saving}
                   className="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition"
                 >
-                  Предай теста ✓
+                  {saving ? 'Запазване...' : 'Предай теста ✓'}
                 </button>
               )}
             </div>
@@ -187,11 +223,15 @@ export default function QuizPlayer({ questions }: { questions: Question[] }) {
               })}
             </div>
 
+            {/* Retake button */}
             <button
               onClick={handleReset}
-              className="w-full py-2.5 rounded-xl border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-sm font-medium transition"
+              className="w-full py-2.5 rounded-xl border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-sm font-semibold transition flex items-center justify-center gap-2"
             >
-              Опитай отново
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Реши теста отново
             </button>
           </>
         )}

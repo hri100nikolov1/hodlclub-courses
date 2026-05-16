@@ -19,8 +19,16 @@ type QuizQuestion = {
 }
 
 type Quiz = {
+  id: string
   lessonId: string
   questions: QuizQuestion[]
+}
+
+type QuizAttempt = {
+  quizId: string
+  answers: number[]
+  score: number
+  total: number
 }
 
 type Props = {
@@ -30,6 +38,7 @@ type Props = {
   courseId: string
   nextModuleId?: string
   quizzes?: Quiz[]
+  quizAttempts?: QuizAttempt[]
 }
 
 // YouTube player types
@@ -78,6 +87,7 @@ export default function LessonPlayer({
   courseId,
   nextModuleId,
   quizzes = [],
+  quizAttempts = [],
 }: Props) {
   const [activeIndex, setActiveIndex] = useState(0)
   const [completed, setCompleted] = useState<Set<string>>(new Set(completedLessonIds))
@@ -403,7 +413,12 @@ export default function LessonPlayer({
 
       {/* ── Quiz ── */}
       {activeQuiz && (
-        <QuizPlayer key={activeLesson.id} questions={activeQuiz.questions} />
+        <QuizPlayer
+          key={activeLesson.id}
+          quizId={activeQuiz.id}
+          questions={activeQuiz.questions}
+          previousAttempt={quizAttempts.find(a => a.quizId === activeQuiz.id) ?? null}
+        />
       )}
 
       {/* ── Lesson Playlist ── */}
