@@ -13,6 +13,7 @@ function RegisterForm() {
   const [token, setToken] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [consent, setConsent] = useState(false)
 
   useEffect(() => {
     const t = searchParams.get('token')
@@ -25,6 +26,11 @@ function RegisterForm() {
 
     if (password.length < 6) {
       setError('Паролата трябва да е поне 6 символа')
+      return
+    }
+
+    if (!consent) {
+      setError('Трябва да се съгласите с Политиката за поверителност')
       return
     }
 
@@ -140,6 +146,29 @@ function RegisterForm() {
               </div>
             )}
 
+            {/* GDPR Consent */}
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="consent"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+              <label htmlFor="consent" className="text-sm text-gray-600 cursor-pointer">
+                Прочетох и се съгласявам с{' '}
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-600 hover:underline font-medium"
+                >
+                  Политиката за поверителност
+                </a>
+                . Разбирам как се обработват личните ми данни.
+              </label>
+            </div>
+
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
                 <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -151,7 +180,7 @@ function RegisterForm() {
 
             <button
               type="submit"
-              disabled={loading || !token}
+              disabled={loading || !token || !consent}
               className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-xl transition duration-150 shadow-md hover:shadow-lg"
             >
               {loading ? (
