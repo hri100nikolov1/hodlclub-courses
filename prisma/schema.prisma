@@ -22,6 +22,7 @@ model User {
   courseAccess         UserCourseAccess[]
   passwordResetTokens  PasswordResetToken[]
   quizAttempts         QuizAttempt[]
+  certificates         Certificate[]
 }
 
 model Course {
@@ -68,8 +69,9 @@ model Quiz {
   id        String         @id @default(cuid())
   lessonId  String         @unique
   lesson    Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  questions QuizQuestion[]
-  attempts  QuizAttempt[]
+  questions    QuizQuestion[]
+  attempts     QuizAttempt[]
+  certificates Certificate[]
 }
 
 model QuizQuestion {
@@ -124,6 +126,17 @@ model InviteToken {
   createdAt DateTime  @default(now())
   course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
   usedBy    User?     @relation("UsedInvite", fields: [usedById], references: [id])
+}
+
+model Certificate {
+  id       String   @id @default(cuid())
+  userId   String
+  quizId   String
+  issuedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz     Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, quizId])
 }
 
 model QuizAttempt {
