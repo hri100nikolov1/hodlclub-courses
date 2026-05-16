@@ -23,15 +23,16 @@ export default function Navbar({ name, role }: NavbarProps) {
       <div className="container mx-auto max-w-6xl px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-6">
-            <Link href={role === 'admin' ? '/admin' : '/dashboard'} className="flex items-center">
+            <Link href={role === 'admin' ? '/admin' : '/dashboard'} className="flex items-center gap-2">
               <Image
                 src="/hodlclub_logo.png"
                 alt="HODLClub"
-                width={120}
-                height={48}
-                className="h-12 w-auto object-contain"
+                width={40}
+                height={40}
+                className="h-10 w-auto object-contain"
                 priority
               />
+              <span className="font-bold text-lg" style={{ color: '#C9A84C' }}>HODLClub</span>
             </Link>
 
             {role === 'admin' && (
