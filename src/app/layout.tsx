@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import CookieBanner from '@/components/CookieBanner'
 
 export const metadata: Metadata = {
   title: 'HODLClub',
@@ -13,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="bg" className="h-full">
-      <body className="min-h-full flex flex-col antialiased">{children}</body>
+      <body className="min-h-full flex flex-col antialiased">
+        {children}
+        <CookieBanner />
+      </body>
     </html>
   )
 }
