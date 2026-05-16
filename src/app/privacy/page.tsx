@@ -21,7 +21,7 @@ export default function PrivacyPage() {
           <div className="prose prose-gray max-w-none space-y-8 text-gray-700 leading-relaxed">
 
             <section>
-              <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Кой сме ние</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Кои сме ние</h2>
               <p>
                 HODLClub е онлайн образователна платформа, предоставяща курсове в областта на
                 криптовалутите и блокчейн технологиите. Курсовете са само и единствено с
