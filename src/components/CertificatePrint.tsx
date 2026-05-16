@@ -1,5 +1,7 @@
 'use client'
 
+import Image from 'next/image'
+
 type Props = {
   userName: string
   lessonTitle: string
@@ -88,15 +90,14 @@ export default function CertificatePrint({
           {/* Content */}
           <div className="relative z-10 h-full flex flex-col items-center justify-center px-16 py-10 text-center">
             {/* Logo / Brand */}
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <span className="text-lg font-bold text-indigo-700 tracking-wide" style={{ fontFamily: 'system-ui, sans-serif' }}>
-                HODLClub
-              </span>
+            <div className="mb-6">
+              <Image
+                src="/hodlclub_logo.png"
+                alt="HODLClub"
+                width={100}
+                height={100}
+                className="h-16 w-auto object-contain mx-auto"
+              />
             </div>
 
             {/* Title */}
