@@ -15,6 +15,7 @@ function RegisterForm() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [consent, setConsent] = useState(false)
+  const [disclaimerConsent, setDisclaimerConsent] = useState(false)
 
   useEffect(() => {
     const t = searchParams.get('token')
@@ -32,6 +33,11 @@ function RegisterForm() {
 
     if (!consent) {
       setError('Трябва да се съгласите с Политиката за поверителност')
+      return
+    }
+
+    if (!disclaimerConsent) {
+      setError('Трябва да потвърдите, че съдържанието е с образователна цел')
       return
     }
 
@@ -172,6 +178,22 @@ function RegisterForm() {
               </label>
             </div>
 
+            {/* Educational Disclaimer Consent */}
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="disclaimerConsent"
+                checked={disclaimerConsent}
+                onChange={(e) => setDisclaimerConsent(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+              <label htmlFor="disclaimerConsent" className="text-sm text-gray-600 cursor-pointer">
+                Разбирам, че съдържанието на платформата е{' '}
+                <span className="font-medium text-gray-800">изцяло с образователна цел</span>{' '}
+                и не представлява финансов съвет, препоръка за инвестиция или покана за покупка/продажба на активи.
+              </label>
+            </div>
+
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
                 <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -183,7 +205,7 @@ function RegisterForm() {
 
             <button
               type="submit"
-              disabled={loading || !token || !consent}
+              disabled={loading || !token || !consent || !disclaimerConsent}
               className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-xl transition duration-150 shadow-md hover:shadow-lg"
             >
               {loading ? (
