@@ -58,7 +58,7 @@ export default function CertificatePrint({
         <div
           id="certificate"
           className="bg-white w-full max-w-3xl aspect-[1.414/1] relative overflow-hidden shadow-2xl"
-          style={{ fontFamily: 'Georgia, serif' }}
+          style={{ fontFamily: "'Times New Roman', Times, serif" }}
         >
           {/* Gold border frame */}
           <div className="absolute inset-3 border-4 border-yellow-500 rounded-sm pointer-events-none" />
@@ -90,14 +90,20 @@ export default function CertificatePrint({
           {/* Content */}
           <div className="relative z-10 h-full flex flex-col items-center justify-center px-16 py-10 text-center">
             {/* Logo / Brand */}
-            <div className="mb-6">
+            <div className="flex items-center justify-center gap-3 mb-6">
               <Image
                 src="/hodlclub_logo.png"
                 alt="HODLClub"
-                width={100}
-                height={100}
-                className="h-16 w-auto object-contain mx-auto"
+                width={60}
+                height={60}
+                className="h-14 w-auto object-contain"
               />
+              <span
+                className="text-2xl font-bold tracking-wide"
+                style={{ color: '#C9A84C', fontFamily: "'Times New Roman', Times, serif" }}
+              >
+                HODLClub
+              </span>
             </div>
 
             {/* Title */}
@@ -107,16 +113,16 @@ export default function CertificatePrint({
             <div className="w-24 h-px bg-gradient-to-r from-transparent via-yellow-500 to-transparent mb-6" />
 
             {/* Recipient */}
-            <p className="text-sm text-gray-500 mb-1" style={{ fontFamily: 'system-ui, sans-serif' }}>Настоящият сертификат се присъжда на</p>
-            <h1 className="text-4xl font-bold text-gray-900 mb-1" style={{ fontFamily: 'Georgia, serif' }}>
+            <p className="text-sm text-gray-500 mb-1" style={{ fontFamily: "'Times New Roman', Times, serif" }}>Настоящият сертификат се присъжда на</p>
+            <h1 className="text-4xl font-bold text-gray-900 mb-1" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
               {userName}
             </h1>
             <div className="w-48 h-0.5 bg-gray-300 mb-6 mx-auto" />
 
             {/* Achievement */}
-            <p className="text-sm text-gray-500 mb-1" style={{ fontFamily: 'system-ui, sans-serif' }}>за постигане на 100% резултат в теста към урок</p>
+            <p className="text-sm text-gray-500 mb-1" style={{ fontFamily: "'Times New Roman', Times, serif" }}>за постигане на 100% резултат в теста към урок</p>
             <p className="text-xl font-semibold text-indigo-700 mb-1">„{lessonTitle}"</p>
-            <p className="text-sm text-gray-500 mb-6" style={{ fontFamily: 'system-ui, sans-serif' }}>
+            <p className="text-sm text-gray-500 mb-6" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
               от курс <span className="font-medium text-gray-700">„{courseTitle}"</span>
             </p>
 
@@ -130,7 +136,7 @@ export default function CertificatePrint({
             </div>
 
             {/* Date + ID */}
-            <div className="flex items-center gap-8 text-xs text-gray-400" style={{ fontFamily: 'system-ui, sans-serif' }}>
+            <div className="flex items-center gap-8 text-xs text-gray-400" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
               <div className="text-center">
                 <p className="font-semibold text-gray-600 text-sm">{issuedAt}</p>
                 <p className="uppercase tracking-widest text-[10px]">Дата</p>
