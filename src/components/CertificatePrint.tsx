@@ -146,17 +146,6 @@ export default function CertificatePrint({
               </span>
             </div>
 
-            {/* Cover Gemini watermark bottom-right */}
-            <div
-              className="absolute"
-              style={{
-                bottom: '1%',
-                right: '0.5%',
-                width: '8%',
-                height: '10%',
-                background: 'radial-gradient(ellipse at center, #0d1b2e 60%, transparent 100%)',
-              }}
-            />
 
           </div>
         </div>
