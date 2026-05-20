@@ -1,7 +1,5 @@
 'use client'
 
-import Image from 'next/image'
-
 type Props = {
   userName: string
   lessonTitle: string
@@ -13,12 +11,20 @@ type Props = {
 
 export default function CertificatePrint({
   userName,
-  lessonTitle,
   moduleTitle,
-  courseTitle,
   issuedAt,
   certificateId,
 }: Props) {
+  // Extract just the module number/short name for the blanks in the template
+  // e.g. "Модул 3: Основните играчи" → "3-ти"
+  const moduleShort = moduleTitle.match(/Модул\s+(\d+)/i)
+    ? (() => {
+        const n = parseInt(moduleTitle.match(/Модул\s+(\d+)/i)![1])
+        const suffixes: Record<number, string> = { 1: '1-ви', 2: '2-ри', 3: '3-ти', 4: '4-ти', 5: '5-ти', 6: '6-ти', 7: '7-ми' }
+        return suffixes[n] ?? `${n}-ти`
+      })()
+    : moduleTitle
+
   return (
     <>
       {/* Print styles */}
@@ -26,7 +32,7 @@ export default function CertificatePrint({
         @media print {
           body * { visibility: hidden; }
           #certificate, #certificate * { visibility: visible; }
-          #certificate { position: fixed; inset: 0; }
+          #certificate { position: fixed; inset: 0; width: 100vw; height: 100vh; }
           .no-print { display: none !important; }
         }
       `}</style>
@@ -54,99 +60,93 @@ export default function CertificatePrint({
       </div>
 
       {/* Certificate */}
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-8">
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-6">
         <div
           id="certificate"
-          className="bg-white w-full max-w-3xl aspect-[1.414/1] relative overflow-hidden shadow-2xl"
-          style={{ fontFamily: "'Times New Roman', Times, serif" }}
+          className="relative w-full shadow-2xl"
+          style={{ maxWidth: '900px', aspectRatio: '2752 / 1536' }}
         >
-          {/* Gold border frame */}
-          <div className="absolute inset-3 border-4 border-yellow-500 rounded-sm pointer-events-none" />
-          <div className="absolute inset-4 border border-yellow-400/60 rounded-sm pointer-events-none" />
+          {/* Template background */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/certificate-template.png"
+            alt="Certificate background"
+            className="absolute inset-0 w-full h-full object-cover"
+            draggable={false}
+          />
 
-          {/* Corner ornaments */}
-          <svg className="absolute top-6 left-6 w-12 h-12 text-yellow-500" viewBox="0 0 50 50" fill="currentColor">
-            <path d="M0 0 L20 0 L0 20 Z M25 0 L50 0 L50 25 L25 0 Z M0 25 L0 50 L25 50 L0 25 Z" opacity="0.3" />
-            <path d="M5 5 L15 5 L5 15 Z" />
-          </svg>
-          <svg className="absolute top-6 right-6 w-12 h-12 text-yellow-500 scale-x-[-1]" viewBox="0 0 50 50" fill="currentColor">
-            <path d="M0 0 L20 0 L0 20 Z M25 0 L50 0 L50 25 L25 0 Z M0 25 L0 50 L25 50 L0 25 Z" opacity="0.3" />
-            <path d="M5 5 L15 5 L5 15 Z" />
-          </svg>
-          <svg className="absolute bottom-6 left-6 w-12 h-12 text-yellow-500 scale-y-[-1]" viewBox="0 0 50 50" fill="currentColor">
-            <path d="M0 0 L20 0 L0 20 Z M25 0 L50 0 L50 25 L25 0 Z M0 25 L0 50 L25 50 L0 25 Z" opacity="0.3" />
-            <path d="M5 5 L15 5 L5 15 Z" />
-          </svg>
-          <svg className="absolute bottom-6 right-6 w-12 h-12 text-yellow-500 scale-[-1]" viewBox="0 0 50 50" fill="currentColor">
-            <path d="M0 0 L20 0 L0 20 Z M25 0 L50 0 L50 25 L25 0 Z M0 25 L0 50 L25 50 L0 25 Z" opacity="0.3" />
-            <path d="M5 5 L15 5 L5 15 Z" />
-          </svg>
+          {/* Overlays — all positioned as % of container */}
+          <div className="absolute inset-0" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
 
-          {/* Background watermark */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
-            <span className="text-9xl font-black text-indigo-900 rotate-[-30deg]">HODLClub</span>
-          </div>
-
-          {/* Content */}
-          <div className="relative z-10 h-full flex flex-col items-center justify-center px-16 py-10 text-center">
-            {/* Logo / Brand */}
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <Image
-                src="/hodlclub_logo.png"
-                alt="HODLClub"
-                width={60}
-                height={60}
-                className="h-14 w-auto object-contain"
-              />
+            {/* Module number in the title line: "СЕРТИФИКАТ ЗА ПРЕМИНАВАНЕ НА ___ МОДУЛ" */}
+            <div
+              className="absolute flex items-center justify-center"
+              style={{
+                top: '25.5%',
+                left: '51%',
+                transform: 'translateX(-50%)',
+                width: '18%',
+              }}
+            >
               <span
-                className="text-2xl font-bold tracking-wide"
-                style={{ color: '#C9A84C', fontFamily: "'Times New Roman', Times, serif" }}
+                className="font-bold text-center tracking-wide uppercase"
+                style={{ color: '#C9A84C', fontSize: 'clamp(10px, 2.2vw, 30px)', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}
               >
-                HODLClub
+                {moduleShort}
               </span>
             </div>
 
-            {/* Title */}
-            <p className="text-xs font-semibold tracking-[0.3em] uppercase text-yellow-600 mb-2">
-              Сертификат за отличен резултат
-            </p>
-            <div className="w-24 h-px bg-gradient-to-r from-transparent via-yellow-500 to-transparent mb-6" />
-
-            {/* Recipient */}
-            <p className="text-sm text-gray-500 mb-1" style={{ fontFamily: "'Times New Roman', Times, serif" }}>Настоящият сертификат се присъжда на</p>
-            <h1 className="text-4xl font-bold text-gray-900 mb-1" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
-              {userName}
-            </h1>
-            <div className="w-48 h-0.5 bg-gray-300 mb-6 mx-auto" />
-
-            {/* Achievement */}
-            <p className="text-sm text-gray-500 mb-1" style={{ fontFamily: "'Times New Roman', Times, serif" }}>за постигане на 100% резултат в теста към урок</p>
-            <p className="text-xl font-semibold text-indigo-700 mb-1">„{lessonTitle}"</p>
-            <p className="text-sm text-gray-500 mb-6" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
-              от курс <span className="font-medium text-gray-700">„{courseTitle}"</span>
-            </p>
-
-            {/* Medal icon */}
-            <div className="mb-6">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg mx-auto">
-                <svg className="w-9 h-9 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
-              </div>
+            {/* User name on the long underline */}
+            <div
+              className="absolute flex items-end justify-center"
+              style={{ top: '42%', left: '50%', transform: 'translateX(-50%)', width: '70%' }}
+            >
+              <span
+                className="font-bold text-center tracking-widest"
+                style={{ color: '#ffffff', fontSize: 'clamp(11px, 2.4vw, 34px)', textShadow: '0 1px 6px rgba(0,0,0,0.9)', letterSpacing: '0.08em' }}
+              >
+                {userName}
+              </span>
             </div>
 
-            {/* Date + ID */}
-            <div className="flex items-center gap-8 text-xs text-gray-400" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
-              <div className="text-center">
-                <p className="font-semibold text-gray-600 text-sm">{issuedAt}</p>
-                <p className="uppercase tracking-widest text-[10px]">Дата</p>
-              </div>
-              <div className="w-px h-8 bg-gray-200" />
-              <div className="text-center">
-                <p className="font-mono text-gray-500 text-xs">{certificateId.slice(0, 8).toUpperCase()}</p>
-                <p className="uppercase tracking-widest text-[10px]">Номер</p>
-              </div>
+            {/* Module number in the body text: "е успешно завършил/а ___ модул" */}
+            <div
+              className="absolute flex items-center"
+              style={{ top: '55%', left: '34%', width: '12%' }}
+            >
+              <span
+                className="font-semibold text-center w-full"
+                style={{ color: '#C9A84C', fontSize: 'clamp(8px, 1.4vw, 20px)', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}
+              >
+                {moduleShort}
+              </span>
             </div>
+
+            {/* Date value */}
+            <div
+              className="absolute flex items-center"
+              style={{ top: '74%', left: '14.5%', width: '22%' }}
+            >
+              <span
+                style={{ color: '#C9A84C', fontSize: 'clamp(7px, 1.2vw, 17px)', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}
+              >
+                {issuedAt}
+              </span>
+            </div>
+
+            {/* Certificate number value */}
+            <div
+              className="absolute flex items-center"
+              style={{ top: '82%', left: '14.5%', width: '22%' }}
+            >
+              <span
+                className="font-mono"
+                style={{ color: '#C9A84C', fontSize: 'clamp(7px, 1.1vw, 16px)', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}
+              >
+                {certificateId.slice(0, 10).toUpperCase()}
+              </span>
+            </div>
+
           </div>
         </div>
       </div>
