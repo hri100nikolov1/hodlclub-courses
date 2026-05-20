@@ -1,6 +1,6 @@
 import { Resend } from 'resend'
 
-const FROM = 'HODLClub <noreply@hodlclub.bg>'
+const FROM = 'HODLClub <noreply@hodlclub.eu>'
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://courses.hodlclub.eu'
 
 function getResend(): Resend | null {
