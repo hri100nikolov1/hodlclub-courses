@@ -82,9 +82,9 @@ export default function CertificatePrint({
             <div
               className="absolute flex items-center justify-center"
               style={{
-                top: '30%',
-                left: '62%',
-                width: '14%',
+                top: '32%',
+                left: '66%',
+                width: '13%',
               }}
             >
               <span
@@ -124,7 +124,7 @@ export default function CertificatePrint({
             {/* Date value */}
             <div
               className="absolute flex items-center"
-              style={{ top: '79%', left: '26%', width: '22%' }}
+              style={{ top: '79%', left: '23%', width: '22%' }}
             >
               <span
                 style={{ color: '#C9A84C', fontSize: 'clamp(7px, 1.2vw, 17px)', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}
@@ -136,7 +136,7 @@ export default function CertificatePrint({
             {/* Certificate number value */}
             <div
               className="absolute flex items-center"
-              style={{ top: '85%', left: '26%', width: '22%' }}
+              style={{ top: '85%', left: '29%', width: '22%' }}
             >
               <span
                 className="font-mono"
@@ -145,6 +145,18 @@ export default function CertificatePrint({
                 {certificateId.slice(0, 10).toUpperCase()}
               </span>
             </div>
+
+            {/* Cover Gemini watermark bottom-right */}
+            <div
+              className="absolute"
+              style={{
+                bottom: '1%',
+                right: '0.5%',
+                width: '8%',
+                height: '10%',
+                background: 'radial-gradient(ellipse at center, #0d1b2e 60%, transparent 100%)',
+              }}
+            />
 
           </div>
         </div>
