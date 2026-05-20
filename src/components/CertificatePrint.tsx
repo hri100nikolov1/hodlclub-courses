@@ -82,10 +82,9 @@ export default function CertificatePrint({
             <div
               className="absolute flex items-center justify-center"
               style={{
-                top: '25.5%',
-                left: '51%',
-                transform: 'translateX(-50%)',
-                width: '18%',
+                top: '30%',
+                left: '62%',
+                width: '14%',
               }}
             >
               <span
@@ -99,7 +98,7 @@ export default function CertificatePrint({
             {/* User name on the long underline */}
             <div
               className="absolute flex items-end justify-center"
-              style={{ top: '42%', left: '50%', transform: 'translateX(-50%)', width: '70%' }}
+              style={{ top: '45%', left: '50%', transform: 'translateX(-50%)', width: '70%' }}
             >
               <span
                 className="font-bold text-center tracking-widest"
@@ -125,7 +124,7 @@ export default function CertificatePrint({
             {/* Date value */}
             <div
               className="absolute flex items-center"
-              style={{ top: '74%', left: '14.5%', width: '22%' }}
+              style={{ top: '79%', left: '26%', width: '22%' }}
             >
               <span
                 style={{ color: '#C9A84C', fontSize: 'clamp(7px, 1.2vw, 17px)', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}
@@ -137,7 +136,7 @@ export default function CertificatePrint({
             {/* Certificate number value */}
             <div
               className="absolute flex items-center"
-              style={{ top: '82%', left: '14.5%', width: '22%' }}
+              style={{ top: '85%', left: '26%', width: '22%' }}
             >
               <span
                 className="font-mono"
