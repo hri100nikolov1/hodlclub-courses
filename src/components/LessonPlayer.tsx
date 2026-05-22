@@ -328,7 +328,6 @@ export default function LessonPlayer({
                 </button>
               </>
             )}
-          </div>
 
             {/* Bunny.net */}
             {isBunny && (
@@ -340,6 +339,8 @@ export default function LessonPlayer({
                 title={activeLesson.title}
               />
             )}
+
+          </div>
 
           {/* YouTube progress bar */}
           {isYouTube && videoProgress > 0 && (
