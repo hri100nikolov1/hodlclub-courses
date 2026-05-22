@@ -78,6 +78,15 @@ function getGoogleDriveEmbedUrl(url: string): string | null {
   return m ? `https://drive.google.com/file/d/${m[1]}/preview` : null
 }
 
+function getBunnyEmbedUrl(url: string): string | null {
+  // Accept full embed URL: https://iframe.mediadelivery.net/embed/LIBID/VIDEOID
+  if (url.includes('iframe.mediadelivery.net/embed/')) return url
+  // Accept just video ID (GUID format)
+  const guidMatch = url.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+  if (guidMatch) return `https://iframe.mediadelivery.net/embed/667903/${url}`
+  return null
+}
+
 const MIN_WATCH_PERCENT = 80 // % of video to watch before "done" unlocks
 
 export default function LessonPlayer({
@@ -116,9 +125,11 @@ export default function LessonPlayer({
 
   const ytVideoId = activeLesson.videoUrl ? getYouTubeVideoId(activeLesson.videoUrl) : null
   const driveEmbedUrl = activeLesson.videoUrl ? getGoogleDriveEmbedUrl(activeLesson.videoUrl) : null
+  const bunnyEmbedUrl = activeLesson.videoUrl ? getBunnyEmbedUrl(activeLesson.videoUrl) : null
   const isYouTube = !!ytVideoId
-  const isGoogleDrive = !!driveEmbedUrl
-  const hasVideo = isYouTube || isGoogleDrive
+  const isGoogleDrive = !!driveEmbedUrl && !bunnyEmbedUrl
+  const isBunny = !!bunnyEmbedUrl
+  const hasVideo = isYouTube || isGoogleDrive || isBunny
 
   // Button unlocks when: already done, or Google Drive, or watched >= MIN_WATCH_PERCENT
   const canMarkDone = isCurrentDone || !isYouTube || videoProgress >= MIN_WATCH_PERCENT
@@ -318,6 +329,17 @@ export default function LessonPlayer({
               </>
             )}
           </div>
+
+            {/* Bunny.net */}
+            {isBunny && (
+              <iframe
+                src={`${bunnyEmbedUrl}?autoplay=false&preload=false`}
+                className="absolute inset-0 w-full h-full"
+                allowFullScreen
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                title={activeLesson.title}
+              />
+            )}
 
           {/* YouTube progress bar */}
           {isYouTube && videoProgress > 0 && (
@@ -529,7 +551,7 @@ export default function LessonPlayer({
       )}
 
       {/* ── Google Drive Fullscreen Overlay ── */}
-      {driveFullscreen && driveEmbedUrl && (
+      {driveFullscreen && (driveEmbedUrl || bunnyEmbedUrl) && (
         <div className="fixed inset-0 z-50 bg-black flex flex-col">
           <div className="flex items-center justify-between px-4 py-2 bg-black/80">
             <span className="text-white text-sm font-medium truncate pr-4">{activeLesson.title}</span>
@@ -544,10 +566,10 @@ export default function LessonPlayer({
           </div>
           <div className="flex-1 relative">
             <iframe
-              src={driveEmbedUrl}
+              src={bunnyEmbedUrl ? `${bunnyEmbedUrl}?autoplay=true` : driveEmbedUrl!}
               className="absolute inset-0 w-full h-full"
               allowFullScreen
-              allow="autoplay; fullscreen"
+              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
               title={activeLesson.title}
             />
           </div>
