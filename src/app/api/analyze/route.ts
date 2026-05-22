@@ -223,6 +223,92 @@ Rainbow Chart, S2F, RSI, MA200, MVRV Z-Score, NUPL, Fear & Greed Index, Реал
 ⚠️ Това е образователен анализ по метода на HODLClub, не финансов съвет. Данните са базирани на публично достъпна информация и могат да бъдат неточни. Преди инвестиционно решение направи собствено проучване.
 ---`
 
+// ─── Real-time data helpers ───────────────────────────────────────────────────
+
+async function fetchSafe(url: string, timeoutMs = 6000): Promise<unknown> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { signal: controller.signal, next: { revalidate: 0 } })
+    clearTimeout(timer)
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    clearTimeout(timer)
+    return null
+  }
+}
+
+function fmt(n: number): string {
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`
+  return `$${n.toLocaleString()}`
+}
+
+async function getCoinData(coinName: string): Promise<string> {
+  const search = await fetchSafe(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(coinName)}`) as { coins?: { id: string; name: string }[] } | null
+  const coinId = search?.coins?.[0]?.id
+  if (!coinId) return ''
+
+  const d = await fetchSafe(`https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`) as Record<string, unknown> | null
+  if (!d) return ''
+
+  const md = d.market_data as Record<string, Record<string, number>> | undefined
+  if (!md) return ''
+
+  const lines = [
+    `\n📊 РЕАЛНИ ДАННИ ОТ COINGECKO (актуални към момента на заявката):`,
+    `Монета: ${d.name} (${String(d.symbol).toUpperCase()}) | Ранг: #${d.market_cap_rank}`,
+    `Цена: $${md.current_price?.usd?.toLocaleString()}`,
+    `Market Cap: ${fmt(md.market_cap?.usd)}`,
+    `FDV: ${md.fully_diluted_valuation?.usd ? fmt(md.fully_diluted_valuation.usd) : 'N/A'}`,
+    `Обем 24ч: ${fmt(md.total_volume?.usd)}`,
+    `Промяна: 24ч ${Number(md.price_change_percentage_24h?.usd ?? md.price_change_percentage_24h).toFixed(2)}% | 7д ${Number(md.price_change_percentage_7d?.usd ?? md.price_change_percentage_7d).toFixed(2)}% | 30д ${Number(md.price_change_percentage_30d?.usd ?? md.price_change_percentage_30d).toFixed(2)}%`,
+    `ATH: $${md.ath?.usd?.toLocaleString()} (${Number(md.ath_change_percentage?.usd).toFixed(1)}% от ATH)`,
+    md.circulating_supply ? `Циркулиращо предлагане: ${(Number(md.circulating_supply) / 1e6).toFixed(2)}M` : '',
+    md.max_supply ? `Макс. предлагане: ${(Number(md.max_supply) / 1e6).toFixed(2)}M` : '',
+  ]
+  return lines.filter(Boolean).join('\n')
+}
+
+async function getBitcoinOnChainData(): Promise<string> {
+  const [stats, fees, mempool] = await Promise.all([
+    fetchSafe('https://api.blockchain.info/stats') as Promise<Record<string, number> | null>,
+    fetchSafe('https://mempool.space/api/v1/fees/recommended') as Promise<Record<string, number> | null>,
+    fetchSafe('https://mempool.space/api/mempool') as Promise<Record<string, number> | null>,
+  ])
+
+  const lines = ['\n⛓️ РЕАЛНИ ON-CHAIN ДАННИ ЗА BITCOIN:']
+  if (stats) {
+    lines.push(`Hash Rate: ${(stats.hash_rate / 1e9).toFixed(2)} EH/s`)
+    lines.push(`Транзакции 24ч: ${stats.n_tx?.toLocaleString()}`)
+    lines.push(`Трудност (Difficulty): ${(stats.difficulty / 1e12).toFixed(2)}T`)
+  }
+  if (fees) {
+    lines.push(`Такси (sat/vB): бавна ${fees.economyFee} | средна ${fees.halfHourFee} | бърза ${fees.fastestFee}`)
+  }
+  if (mempool) {
+    lines.push(`Mempool: ${mempool.count?.toLocaleString()} транзакции чакат`)
+  }
+  return lines.length > 1 ? lines.join('\n') : ''
+}
+
+async function getFearGreed(): Promise<string> {
+  const d = await fetchSafe('https://api.alternative.me/fng/?limit=1') as { data?: { value: string; value_classification: string }[] } | null
+  if (!d?.data?.[0]) return ''
+  return `\n😱 Fear & Greed Index: ${d.data[0].value}/100 — ${d.data[0].value_classification}`
+}
+
+function extractCoinName(message: string): string | null {
+  const m = message.match(/анализирай\s+([а-яА-Яa-zA-Z0-9 ]+?)(?:\s*$|\s{2,})/i)
+    || message.match(/анализ\s+на\s+([а-яА-Яa-zA-Z0-9]+)/i)
+    || message.match(/analyse?\s+([a-zA-Z0-9]+)/i)
+  return m ? m[1].trim() : null
+}
+
+// ─── Route handler ────────────────────────────────────────────────────────────
+
 export async function POST(request: NextRequest) {
   const session = await getSession()
   if (!session) {
@@ -240,22 +326,36 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Невалидни данни' }, { status: 400 })
     }
 
+    const lastMessage = messages[messages.length - 1]
+    const userText: string = lastMessage.content
+    const isBtc = /bitcoin|биткойн|\bbtc\b/i.test(userText)
+    const coinName = extractCoinName(userText)
+
+    // Fetch real-time data in parallel
+    const [coinData, btcOnChain, fearGreed] = await Promise.all([
+      coinName ? getCoinData(coinName) : Promise.resolve(''),
+      isBtc ? getBitcoinOnChainData() : Promise.resolve(''),
+      getFearGreed(),
+    ])
+
+    const realTimeContext = [coinData, btcOnChain, fearGreed].filter(Boolean).join('\n')
+    const enrichedContent = realTimeContext
+      ? `${userText}\n\n[РЕАЛНИ ПАЗАРНИ ДАННИ — използвай ги в анализа:]\n${realTimeContext}`
+      : userText
+
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       systemInstruction: SYSTEM_PROMPT,
     })
 
-    // Convert messages to Gemini format
     const history = messages.slice(0, -1).map((msg: { role: string; content: string }) => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }],
     }))
 
-    const lastMessage = messages[messages.length - 1]
-
     const chat = model.startChat({ history })
-    const result = await chat.sendMessage(lastMessage.content)
+    const result = await chat.sendMessage(enrichedContent)
     const text = result.response.text()
 
     return Response.json({ content: text })
