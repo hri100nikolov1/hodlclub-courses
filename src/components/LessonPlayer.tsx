@@ -94,6 +94,7 @@ export default function LessonPlayer({
   const [loading, setLoading] = useState(false)
   const [videoProgress, setVideoProgress] = useState(0) // 0–100
   const [showModules, setShowModules] = useState(false)
+  const [driveFullscreen, setDriveFullscreen] = useState(false)
 
   // Local quiz attempts state — initialized from server, updated after each submission
   const [localAttempts, setLocalAttempts] = useState<Record<string, QuizAttempt>>(
@@ -306,14 +307,7 @@ export default function LessonPlayer({
                 </div>
                 {/* Fullscreen button */}
                 <button
-                  onClick={() => {
-                    const iframe = document.getElementById(`drive-player-${activeLesson.id}`) as HTMLIFrameElement | null
-                    if (iframe?.requestFullscreen) {
-                      iframe.requestFullscreen()
-                    } else {
-                      window.open(activeLesson.videoUrl!.replace('/view', '').replace('drive.google.com/file/d/', 'drive.google.com/file/d/') + '/view', '_blank')
-                    }
-                  }}
+                  onClick={() => setDriveFullscreen(true)}
                   className="absolute bottom-3 right-3 z-20 bg-black/60 hover:bg-black/80 text-white rounded-lg p-2 transition"
                   title="Цял екран"
                 >
@@ -531,6 +525,32 @@ export default function LessonPlayer({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
+        </div>
+      )}
+
+      {/* ── Google Drive Fullscreen Overlay ── */}
+      {driveFullscreen && driveEmbedUrl && (
+        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2 bg-black/80">
+            <span className="text-white text-sm font-medium truncate pr-4">{activeLesson.title}</span>
+            <button
+              onClick={() => setDriveFullscreen(false)}
+              className="text-white bg-white/20 hover:bg-white/30 rounded-lg p-2 flex-shrink-0"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 relative">
+            <iframe
+              src={driveEmbedUrl}
+              className="absolute inset-0 w-full h-full"
+              allowFullScreen
+              allow="autoplay; fullscreen"
+              title={activeLesson.title}
+            />
+          </div>
         </div>
       )}
     </div>
