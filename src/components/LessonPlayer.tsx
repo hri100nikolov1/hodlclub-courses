@@ -274,10 +274,11 @@ export default function LessonPlayer({
             {isGoogleDrive && (
               <>
                 <iframe
+                  id={`drive-player-${activeLesson.id}`}
                   src={driveEmbedUrl!}
                   className="absolute inset-0 w-full h-full"
                   allowFullScreen
-                  allow="autoplay"
+                  allow="autoplay; fullscreen"
                   title={activeLesson.title}
                 />
                 {/* HODLClub watermark */}
@@ -303,6 +304,23 @@ export default function LessonPlayer({
                     }}
                   />
                 </div>
+                {/* Fullscreen button */}
+                <button
+                  onClick={() => {
+                    const iframe = document.getElementById(`drive-player-${activeLesson.id}`) as HTMLIFrameElement | null
+                    if (iframe?.requestFullscreen) {
+                      iframe.requestFullscreen()
+                    } else {
+                      window.open(activeLesson.videoUrl!.replace('/view', '').replace('drive.google.com/file/d/', 'drive.google.com/file/d/') + '/view', '_blank')
+                    }
+                  }}
+                  className="absolute bottom-3 right-3 z-20 bg-black/60 hover:bg-black/80 text-white rounded-lg p-2 transition"
+                  title="Цял екран"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  </svg>
+                </button>
               </>
             )}
           </div>
