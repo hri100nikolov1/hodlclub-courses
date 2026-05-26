@@ -11,19 +11,19 @@ const WELCOME_MESSAGE: Message = {
   role: 'assistant',
   content: `Здравей! Аз съм **AI Анализатор на HODLClub** 🔍
 
-Анализирам криптовалутни проекти по **5-стълбовата методология** на HODLClub с **100-точкова scoring система**:
+Анализирам криптовалутни проекти по **D.E.E.P Формулата** на HODLClub с **100-точкова scoring система**:
 
-| Стълб | Точки |
-|-------|-------|
-| 🏛️ Фундаментален анализ | /30 |
-| 💰 Токеномика | /20 |
-| 🔗 On-Chain анализ | /20 |
-| 🤝 Репутация и партньорства | /30 |
+| Компонент | Точки |
+|-----------|-------|
+| 📊 D — Demand (Търсене) | /25 |
+| ⚙️ E — Execution (Изпълнение) | /25 |
+| 💰 E — Economics (Токеномика) | /25 |
+| 🏆 P — Positioning (Позиция) | /25 |
 
 **Какво мога да правя:**
-- Пълен структуриран анализ на всеки крипто проект
-- Оценка на Bitcoin пазарните индикатори (Rainbow Chart, MVRV, NUPL и др.)
-- Идентифициране на red flags
+- Пълен D.E.E.P анализ на всеки крипто проект
+- Оценка на Bitcoin пазарните индикатори (MVRV, NUPL, Fear & Greed и др.)
+- Идентифициране на red flags с точкови удръжки
 - Отговори на въпроси по крипто анализ
 
 **Как да започнем:**
@@ -134,7 +134,7 @@ const SUGGESTIONS = [
   'Анализирай Ethereum',
   'Какво показва MVRV за Bitcoin?',
   'Обясни ми Fear & Greed Index',
-  'Какви са 10-те red flags?',
+  'Обясни ми D.E.E.P Формулата',
 ]
 
 export default function AnalyzePage() {
@@ -198,7 +198,7 @@ export default function AnalyzePage() {
         </div>
         <div>
           <h1 className="text-xl font-bold text-gray-900">AI Анализатор</h1>
-          <p className="text-sm text-gray-500">Анализ по методологията на HODLClub • 5 стълба • 100 точки</p>
+          <p className="text-sm text-gray-500">D.E.E.P Формула на HODLClub • 100 точки</p>
         </div>
       </div>
 
