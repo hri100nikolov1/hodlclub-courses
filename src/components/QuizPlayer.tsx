@@ -215,8 +215,8 @@ export default function QuizPlayer({ questions, quizId, previousAttempt, onAttem
                             Твоят отговор: <span className="font-medium">{(q.options as string[])[userAnswer]}</span>
                           </p>
                         )}
-                        <p className="text-xs text-green-700">
-                          Верен отговор: <span className="font-medium">{(q.options as string[])[q.correctIndex]}</span>
+                        <p className="text-xs text-gray-500 italic">
+                          Прегледай урока и помисли отново над този въпрос.
                         </p>
                       </div>
                     )}
