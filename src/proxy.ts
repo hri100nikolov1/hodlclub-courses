@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifySession } from '@/lib/session'
 
-const PUBLIC_PATHS = ['/login', '/register']
+const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password']
 const ADMIN_PATHS = ['/admin']
 
 export async function proxy(request: NextRequest) {
@@ -42,5 +42,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/auth).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/auth|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.ico|.*\\.webp).*)'],
 }
