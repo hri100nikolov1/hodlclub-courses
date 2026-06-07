@@ -56,6 +56,7 @@ export default function LoginPage() {
             height={140}
             className="h-28 w-auto object-contain mx-auto mb-2"
             priority
+            unoptimized
           />
           <p className="text-gray-500 mt-1">Влезте в акаунта си</p>
         </div>

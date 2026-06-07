@@ -49,6 +49,7 @@ export default function ForgotPasswordPage() {
             height={140}
             className="h-28 w-auto object-contain mx-auto mb-2"
             priority
+            unoptimized
           />
           <p className="text-gray-500 mt-1">Забравена парола</p>
         </div>
