@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 type Question = {
   id: string
@@ -26,7 +25,6 @@ type Props = {
 
 export default function QuizPlayer({ questions, quizId, previousAttempt, onAttemptSaved }: Props) {
   const sorted = [...questions].sort((a, b) => a.order - b.order)
-  const router = useRouter()
 
   const [answers, setAnswers] = useState<(number | null)[]>(
     previousAttempt ? previousAttempt.answers : Array(sorted.length).fill(null)
@@ -34,7 +32,6 @@ export default function QuizPlayer({ questions, quizId, previousAttempt, onAttem
   const [submitted, setSubmitted] = useState(!!previousAttempt)
   const [current, setCurrent] = useState(0)
   const [saving, setSaving] = useState(false)
-  const [claimingCert, setClaimingCert] = useState(false)
 
   const q = sorted[current]
   const selected = answers[current]
@@ -81,25 +78,6 @@ export default function QuizPlayer({ questions, quizId, previousAttempt, onAttem
     setAnswers(Array(sorted.length).fill(null))
     setSubmitted(false)
     setCurrent(0)
-  }
-
-  async function handleClaimCertificate() {
-    setClaimingCert(true)
-    try {
-      const res = await fetch('/api/certificate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quizId }),
-      })
-      const data = await res.json()
-      if (data.certificateId) {
-        router.push(`/certificate/${data.certificateId}`)
-      }
-    } catch (err) {
-      console.error('Failed to claim certificate:', err)
-    } finally {
-      setClaimingCert(false)
-    }
   }
 
   return (
@@ -215,26 +193,6 @@ export default function QuizPlayer({ questions, quizId, previousAttempt, onAttem
               {pct === 100 && <p className="text-green-600 font-semibold mt-1">🎉 Перфектен резултат!</p>}
               {pct >= 60 && pct < 100 && <p className="text-yellow-600 font-semibold mt-1">👍 Добре се справи!</p>}
               {pct < 60 && <p className="text-red-500 font-semibold mt-1">Прегледай урока и опитай отново.</p>}
-
-              {/* Certificate button for perfect score */}
-              {pct === 100 && (
-                <button
-                  onClick={handleClaimCertificate}
-                  disabled={claimingCert}
-                  className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:opacity-50 text-white font-bold text-sm shadow-md transition"
-                >
-                  {claimingCert ? (
-                    'Зареждане...'
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                      </svg>
-                      Вземи сертификата
-                    </>
-                  )}
-                </button>
-              )}
             </div>
 
             {/* Answer review */}

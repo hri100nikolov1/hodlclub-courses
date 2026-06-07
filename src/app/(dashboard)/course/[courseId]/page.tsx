@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
+import ModuleCertificateButton from '@/components/ModuleCertificateButton'
 
 export default async function CoursePage({
   params,
@@ -27,7 +28,9 @@ export default async function CoursePage({
     include: {
       modules: {
         orderBy: { order: 'asc' },
-        include: { lessons: { select: { id: true } } },
+        include: {
+          lessons: { select: { id: true, quiz: { select: { id: true } } } },
+        },
       },
     },
   })
@@ -46,11 +49,41 @@ export default async function CoursePage({
   })
   const completedLessonIds = new Set(lessonProgress.map((p) => p.lessonId))
 
+  // All quiz ids across the course, and the user's perfect-score quiz ids
+  const allQuizIds = course.modules.flatMap((m) =>
+    m.lessons.map((l) => l.quiz?.id).filter((id): id is string => !!id)
+  )
+  const attempts = allQuizIds.length
+    ? await prisma.quizAttempt.findMany({
+        where: { userId: session.userId, quizId: { in: allQuizIds } },
+        select: { quizId: true, score: true, total: true },
+      })
+    : []
+  const perfectQuizIds = new Set(
+    attempts.filter((a) => a.total > 0 && a.score === a.total).map((a) => a.quizId)
+  )
+
+  // Existing certificates per module for this user
+  const certificates = await prisma.certificate.findMany({
+    where: { userId: session.userId },
+    select: { id: true, moduleId: true },
+  })
+  const certByModule = new Map(certificates.map((c) => [c.moduleId, c.id]))
+
   const modulesWithState = course.modules.map((mod, index) => {
     const isCompleted = completedModuleIds.has(mod.id)
     const prevModule = index === 0 ? null : course.modules[index - 1]
     const isLocked = index > 0 && !completedModuleIds.has(prevModule!.id)
-    return { ...mod, isLocked, isCompleted }
+
+    // Certificate eligibility: module has quizzes AND all are perfect
+    const moduleQuizIds = mod.lessons
+      .map((l) => l.quiz?.id)
+      .filter((id): id is string => !!id)
+    const certEligible =
+      moduleQuizIds.length > 0 && moduleQuizIds.every((id) => perfectQuizIds.has(id))
+    const certificateId = certByModule.get(mod.id) ?? null
+
+    return { ...mod, isLocked, isCompleted, certEligible, certificateId }
   })
 
   const allLessons = course.modules.flatMap((m) => m.lessons)
@@ -122,53 +155,64 @@ export default async function CoursePage({
                 : 'border-indigo-100 hover:border-indigo-300'
             }`}
           >
-            {mod.isLocked ? (
-              <div className="flex items-center gap-4 p-5">
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
+            <div className="flex items-center">
+              {mod.isLocked ? (
+                <div className="flex-1 flex items-center gap-4 p-5 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-400 font-medium mb-0.5">МОДУЛ {index + 1}</p>
+                    <h3 className="font-semibold text-gray-500 truncate">{mod.title}</h3>
+                    {mod.description && <p className="text-sm text-gray-400 mt-0.5">{mod.description}</p>}
+                  </div>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full flex-shrink-0">Заключен</span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-400 font-medium mb-0.5">МОДУЛ {index + 1}</p>
-                  <h3 className="font-semibold text-gray-500 truncate">{mod.title}</h3>
-                  {mod.description && <p className="text-sm text-gray-400 mt-0.5">{mod.description}</p>}
-                </div>
-                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">Заключен</span>
-              </div>
-            ) : (
-              <Link
-                href={`/course/${courseId}/module/${mod.id}`}
-                className="flex items-center gap-4 p-5 group"
-              >
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    mod.isCompleted ? 'bg-green-100' : 'bg-indigo-100 group-hover:bg-indigo-200 transition'
-                  }`}
+              ) : (
+                <Link
+                  href={`/course/${courseId}/module/${mod.id}`}
+                  className="flex-1 flex items-center gap-4 p-5 group min-w-0"
                 >
-                  {mod.isCompleted ? (
-                    <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-400 font-medium mb-0.5">МОДУЛ {index + 1}</p>
-                  <h3 className={`font-semibold truncate group-hover:text-indigo-600 transition ${mod.isCompleted ? 'text-green-700' : 'text-gray-900'}`}>
-                    {mod.title}
-                  </h3>
-                  {mod.description && <p className="text-sm text-gray-500 mt-0.5">{mod.description}</p>}
-                </div>
-                <svg className="w-5 h-5 text-gray-300 group-hover:text-indigo-400 transition flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
-            )}
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      mod.isCompleted ? 'bg-green-100' : 'bg-indigo-100 group-hover:bg-indigo-200 transition'
+                    }`}
+                  >
+                    {mod.isCompleted ? (
+                      <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-400 font-medium mb-0.5">МОДУЛ {index + 1}</p>
+                    <h3 className={`font-semibold truncate group-hover:text-indigo-600 transition ${mod.isCompleted ? 'text-green-700' : 'text-gray-900'}`}>
+                      {mod.title}
+                    </h3>
+                    {mod.description && <p className="text-sm text-gray-500 mt-0.5">{mod.description}</p>}
+                  </div>
+                  <svg className="w-5 h-5 text-gray-300 group-hover:text-indigo-400 transition flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              )}
+
+              {/* Certificate button — one per module */}
+              <div className="flex-shrink-0 pr-5 pl-2">
+                <ModuleCertificateButton
+                  moduleId={mod.id}
+                  eligible={mod.certEligible}
+                  certificateId={mod.certificateId}
+                />
+              </div>
+            </div>
           </div>
         ))}
       </div>

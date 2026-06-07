@@ -13,19 +13,10 @@ export default async function CertificatePage({
     where: { id },
     include: {
       user: { select: { name: true } },
-      quiz: {
-        include: {
-          lesson: {
-            select: {
-              title: true,
-              module: {
-                select: {
-                  title: true,
-                  course: { select: { title: true } },
-                },
-              },
-            },
-          },
+      module: {
+        select: {
+          title: true,
+          course: { select: { title: true } },
         },
       },
     },
@@ -42,9 +33,9 @@ export default async function CertificatePage({
   return (
     <CertificatePrint
       userName={certificate.user.name}
-      lessonTitle={certificate.quiz.lesson.title}
-      moduleTitle={certificate.quiz.lesson.module.title}
-      courseTitle={certificate.quiz.lesson.module.course.title}
+      lessonTitle=""
+      moduleTitle={certificate.module.title}
+      courseTitle={certificate.module.course.title}
       issuedAt={issuedAt}
       certificateId={certificate.id}
     />

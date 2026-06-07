@@ -50,6 +50,7 @@ model Module {
   lessons     Lesson[]
   course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
   progress    ModuleProgress[]
+  certificates Certificate[]
 }
 
 model Lesson {
@@ -71,7 +72,6 @@ model Quiz {
   lesson    Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   questions    QuizQuestion[]
   attempts     QuizAttempt[]
-  certificates Certificate[]
 }
 
 model QuizQuestion {
@@ -131,12 +131,12 @@ model InviteToken {
 model Certificate {
   id       String   @id @default(cuid())
   userId   String
-  quizId   String
+  moduleId String
   issuedAt DateTime @default(now())
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quiz     Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  module   Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, quizId])
+  @@unique([userId, moduleId])
 }
 
 model QuizAttempt {

@@ -9,28 +9,60 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Не сте влезли' }, { status: 401 })
     }
 
-    const { quizId } = await request.json()
-    if (!quizId) {
+    const { moduleId } = await request.json()
+    if (!moduleId) {
       return Response.json({ error: 'Невалидни данни' }, { status: 400 })
     }
 
-    // Verify that the user actually got 100% on this quiz
-    const attempt = await prisma.quizAttempt.findUnique({
-      where: { userId_quizId: { userId: session.userId, quizId } },
+    // Load the module with its lessons and their quizzes
+    const moduleData = await prisma.module.findUnique({
+      where: { id: moduleId },
+      include: {
+        lessons: {
+          include: { quiz: { select: { id: true } } },
+        },
+      },
     })
 
-    if (!attempt) {
-      return Response.json({ error: 'Не е намерен опит за теста' }, { status: 404 })
+    if (!moduleData) {
+      return Response.json({ error: 'Модулът не е намерен' }, { status: 404 })
     }
 
-    if (attempt.score !== attempt.total) {
-      return Response.json({ error: 'Не сте постигнали 100% резултат' }, { status: 403 })
+    // Collect all quizzes in this module
+    const quizIds = moduleData.lessons
+      .map((l) => l.quiz?.id)
+      .filter((id): id is string => !!id)
+
+    if (quizIds.length === 0) {
+      return Response.json(
+        { error: 'Този модул няма тестове' },
+        { status: 400 }
+      )
     }
 
-    // Upsert certificate (one per user+quiz)
+    // Fetch the user's attempts for these quizzes
+    const attempts = await prisma.quizAttempt.findMany({
+      where: { userId: session.userId, quizId: { in: quizIds } },
+      select: { quizId: true, score: true, total: true },
+    })
+
+    // Every quiz must have an attempt with a perfect score
+    const perfectQuizIds = new Set(
+      attempts.filter((a) => a.total > 0 && a.score === a.total).map((a) => a.quizId)
+    )
+    const allPerfect = quizIds.every((id) => perfectQuizIds.has(id))
+
+    if (!allPerfect) {
+      return Response.json(
+        { error: 'Трябва да решите всички тестове от модула с максимален резултат' },
+        { status: 403 }
+      )
+    }
+
+    // Upsert certificate (one per user+module)
     const certificate = await prisma.certificate.upsert({
-      where: { userId_quizId: { userId: session.userId, quizId } },
-      create: { userId: session.userId, quizId },
+      where: { userId_moduleId: { userId: session.userId, moduleId } },
+      create: { userId: session.userId, moduleId },
       update: {},
     })
 
