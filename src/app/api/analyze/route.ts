@@ -293,37 +293,50 @@ async function fetchSafe(url: string, timeoutMs = 6000): Promise<unknown> {
   }
 }
 
-function fmt(n: number): string {
+function fmt(n: number | undefined | null): string {
+  if (n == null || typeof n !== 'number' || !isFinite(n)) return 'N/A'
   if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`
   if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`
   if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`
   return `$${n.toLocaleString()}`
 }
 
+function num(n: unknown, digits = 2): string {
+  const v = Number(n)
+  return isFinite(v) ? v.toFixed(digits) : 'N/A'
+}
+
 async function getCoinData(coinName: string): Promise<string> {
-  const search = await fetchSafe(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(coinName)}`) as { coins?: { id: string; name: string }[] } | null
-  const coinId = search?.coins?.[0]?.id
-  if (!coinId) return ''
+  try {
+    const search = await fetchSafe(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(coinName)}`) as { coins?: { id: string; name: string }[] } | null
+    const coinId = search?.coins?.[0]?.id
+    if (!coinId) return ''
 
-  const d = await fetchSafe(`https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`) as Record<string, unknown> | null
-  if (!d) return ''
+    const d = await fetchSafe(`https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`) as Record<string, unknown> | null
+    if (!d) return ''
 
-  const md = d.market_data as Record<string, Record<string, number>> | undefined
-  if (!md) return ''
+    const md = d.market_data as Record<string, Record<string, number>> | undefined
+    if (!md) return ''
 
-  const lines = [
-    `\n📊 РЕАЛНИ ДАННИ ОТ COINGECKO (актуални към момента на заявката):`,
-    `Монета: ${d.name} (${String(d.symbol).toUpperCase()}) | Ранг: #${d.market_cap_rank}`,
-    `Цена: $${md.current_price?.usd?.toLocaleString()}`,
-    `Market Cap: ${fmt(md.market_cap?.usd)}`,
-    `FDV: ${md.fully_diluted_valuation?.usd ? fmt(md.fully_diluted_valuation.usd) : 'N/A'}`,
-    `Обем 24ч: ${fmt(md.total_volume?.usd)}`,
-    `Промяна: 24ч ${Number(md.price_change_percentage_24h?.usd ?? md.price_change_percentage_24h).toFixed(2)}% | 7д ${Number(md.price_change_percentage_7d?.usd ?? md.price_change_percentage_7d).toFixed(2)}% | 30д ${Number(md.price_change_percentage_30d?.usd ?? md.price_change_percentage_30d).toFixed(2)}%`,
-    `ATH: $${md.ath?.usd?.toLocaleString()} (${Number(md.ath_change_percentage?.usd).toFixed(1)}% от ATH)`,
-    md.circulating_supply ? `Циркулиращо предлагане: ${(Number(md.circulating_supply) / 1e6).toFixed(2)}M` : '',
-    md.max_supply ? `Макс. предлагане: ${(Number(md.max_supply) / 1e6).toFixed(2)}M` : '',
-  ]
-  return lines.filter(Boolean).join('\n')
+    const price = md.current_price?.usd
+    const ath = md.ath?.usd
+    const lines = [
+      `\n📊 РЕАЛНИ ДАННИ ОТ COINGECKO (актуални към момента на заявката):`,
+      `Монета: ${d.name} (${String(d.symbol).toUpperCase()}) | Ранг: #${d.market_cap_rank ?? 'N/A'}`,
+      `Цена: ${typeof price === 'number' ? '$' + price.toLocaleString() : 'N/A'}`,
+      `Market Cap: ${fmt(md.market_cap?.usd)}`,
+      `FDV: ${fmt(md.fully_diluted_valuation?.usd)}`,
+      `Обем 24ч: ${fmt(md.total_volume?.usd)}`,
+      `Промяна: 24ч ${num(md.price_change_percentage_24h?.usd ?? md.price_change_percentage_24h)}% | 7д ${num(md.price_change_percentage_7d?.usd ?? md.price_change_percentage_7d)}% | 30д ${num(md.price_change_percentage_30d?.usd ?? md.price_change_percentage_30d)}%`,
+      `ATH: ${typeof ath === 'number' ? '$' + ath.toLocaleString() : 'N/A'} (${num(md.ath_change_percentage?.usd, 1)}% от ATH)`,
+      md.circulating_supply ? `Циркулиращо предлагане: ${num(Number(md.circulating_supply) / 1e6)}M` : '',
+      md.max_supply ? `Макс. предлагане: ${num(Number(md.max_supply) / 1e6)}M` : '',
+    ]
+    return lines.filter(Boolean).join('\n')
+  } catch (err) {
+    console.error('getCoinData error:', err)
+    return ''
+  }
 }
 
 async function getBitcoinOnChainData(): Promise<string> {
@@ -381,21 +394,28 @@ export async function POST(request: NextRequest) {
     }
 
     const lastMessage = messages[messages.length - 1]
-    const userText: string = lastMessage.content
-    const isBtc = /bitcoin|биткойн|\bbtc\b/i.test(userText)
-    const coinName = extractCoinName(userText)
+    const userText: string = lastMessage?.content ?? ''
+    if (!userText.trim()) {
+      return Response.json({ error: 'Празно съобщение' }, { status: 400 })
+    }
 
-    // Fetch real-time data in parallel
-    const [coinData, btcOnChain, fearGreed] = await Promise.all([
-      coinName ? getCoinData(coinName) : Promise.resolve(''),
-      isBtc ? getBitcoinOnChainData() : Promise.resolve(''),
-      getFearGreed(),
-    ])
-
-    const realTimeContext = [coinData, btcOnChain, fearGreed].filter(Boolean).join('\n')
-    const enrichedContent = realTimeContext
-      ? `${userText}\n\n[РЕАЛНИ ПАЗАРНИ ДАННИ — използвай ги в анализа:]\n${realTimeContext}`
-      : userText
+    // Fetch real-time data — fully non-fatal, never breaks the request
+    let enrichedContent = userText
+    try {
+      const isBtc = /bitcoin|биткойн|\bbtc\b/i.test(userText)
+      const coinName = extractCoinName(userText)
+      const [coinData, btcOnChain, fearGreed] = await Promise.all([
+        coinName ? getCoinData(coinName) : Promise.resolve(''),
+        isBtc ? getBitcoinOnChainData() : Promise.resolve(''),
+        getFearGreed(),
+      ])
+      const realTimeContext = [coinData, btcOnChain, fearGreed].filter(Boolean).join('\n')
+      if (realTimeContext) {
+        enrichedContent = `${userText}\n\n[РЕАЛНИ ПАЗАРНИ ДАННИ — използвай ги в анализа:]\n${realTimeContext}`
+      }
+    } catch (e) {
+      console.error('Real-time data enrichment failed (non-fatal):', e)
+    }
 
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({
@@ -403,10 +423,14 @@ export async function POST(request: NextRequest) {
       systemInstruction: SYSTEM_PROMPT,
     })
 
-    const history = messages.slice(0, -1).map((msg: { role: string; content: string }) => ({
+    // Build history; Gemini requires it to start with a 'user' turn and alternate.
+    let history = messages.slice(0, -1).map((msg: { role: string; content: string }) => ({
       role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }],
+      parts: [{ text: msg.content ?? '' }],
     }))
+    // Drop any leading non-user turns so history always starts with 'user'
+    const firstUser = history.findIndex((h: { role: string }) => h.role === 'user')
+    history = firstUser === -1 ? [] : history.slice(firstUser)
 
     const chat = model.startChat({ history })
     const result = await chat.sendMessage(enrichedContent)
@@ -414,7 +438,28 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ content: text })
   } catch (err) {
+    // Classify the error so the cause is visible instead of a generic message
+    const msg = (err instanceof Error ? err.message : String(err)).toLowerCase()
     console.error('Gemini error:', err)
+
+    if (msg.includes('429') || msg.includes('quota') || msg.includes('rate') || msg.includes('resource has been exhausted')) {
+      return Response.json(
+        { error: 'AI услугата е претоварена в момента (достигнат лимит). Опитай отново след минута.' },
+        { status: 429 }
+      )
+    }
+    if (msg.includes('api key') || msg.includes('api_key') || msg.includes('permission') || msg.includes('401') || msg.includes('403')) {
+      return Response.json(
+        { error: 'Проблем с конфигурацията на AI услугата. Свържи се с администратор.' },
+        { status: 500 }
+      )
+    }
+    if (msg.includes('safety') || msg.includes('blocked')) {
+      return Response.json(
+        { error: 'Заявката беше блокирана от филтрите за безопасност. Преформулирай въпроса.' },
+        { status: 400 }
+      )
+    }
     return Response.json({ error: 'Грешка при AI анализа. Опитай отново.' }, { status: 500 })
   }
 }
