@@ -155,7 +155,7 @@ export default async function CoursePage({
                 : 'border-indigo-100 hover:border-indigo-300'
             }`}
           >
-            <div className="flex items-center">
+            <div className="flex flex-col sm:flex-row sm:items-center">
               {mod.isLocked ? (
                 <div className="flex-1 flex items-center gap-4 p-5 min-w-0">
                   <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
@@ -166,7 +166,7 @@ export default async function CoursePage({
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-gray-400 font-medium mb-0.5">МОДУЛ {index + 1}</p>
                     <h3 className="font-semibold text-gray-500 truncate">{mod.title}</h3>
-                    {mod.description && <p className="text-sm text-gray-400 mt-0.5">{mod.description}</p>}
+                    {mod.description && <p className="text-sm text-gray-400 mt-0.5 line-clamp-2">{mod.description}</p>}
                   </div>
                   <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full flex-shrink-0">Заключен</span>
                 </div>
@@ -196,16 +196,16 @@ export default async function CoursePage({
                     <h3 className={`font-semibold truncate group-hover:text-indigo-600 transition ${mod.isCompleted ? 'text-green-700' : 'text-gray-900'}`}>
                       {mod.title}
                     </h3>
-                    {mod.description && <p className="text-sm text-gray-500 mt-0.5">{mod.description}</p>}
+                    {mod.description && <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{mod.description}</p>}
                   </div>
-                  <svg className="w-5 h-5 text-gray-300 group-hover:text-indigo-400 transition flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="hidden sm:block w-5 h-5 text-gray-300 group-hover:text-indigo-400 transition flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </Link>
               )}
 
               {/* Certificate button — one per module */}
-              <div className="flex-shrink-0 pr-5 pl-2">
+              <div className="flex-shrink-0 px-5 pb-5 pt-0 sm:p-0 sm:pr-5 sm:pl-2">
                 <ModuleCertificateButton
                   moduleId={mod.id}
                   eligible={mod.certEligible}

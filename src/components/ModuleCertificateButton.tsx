@@ -18,7 +18,7 @@ export default function ModuleCertificateButton({ moduleId, eligible, certificat
     return (
       <a
         href={`/certificate/${certificateId}`}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold text-xs shadow-sm transition whitespace-nowrap"
+        className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold text-xs shadow-sm transition whitespace-nowrap"
       >
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -55,7 +55,7 @@ export default function ModuleCertificateButton({ moduleId, eligible, certificat
       <button
         onClick={handleClaim}
         disabled={loading}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:opacity-50 text-white font-semibold text-xs shadow-sm transition whitespace-nowrap"
+        className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:opacity-50 text-white font-semibold text-xs shadow-sm transition whitespace-nowrap"
       >
         {loading ? (
           'Зареждане...'
@@ -74,7 +74,7 @@ export default function ModuleCertificateButton({ moduleId, eligible, certificat
   // Not eligible yet → locked / disabled
   return (
     <span
-      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-100 text-gray-400 font-semibold text-xs whitespace-nowrap cursor-not-allowed"
+      className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-gray-100 text-gray-400 font-semibold text-xs whitespace-nowrap cursor-not-allowed"
       title="Решете всички тестове от модула с максимален резултат, за да отключите сертификата"
     >
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
