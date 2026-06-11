@@ -71,6 +71,8 @@ export default async function CoursePage({
   const certByModule = new Map(certificates.map((c) => [c.moduleId, c.id]))
 
   const modulesWithState = course.modules.map((mod, index) => {
+    // A module with no lessons yet is "coming soon" (content being prepared)
+    const comingSoon = mod.lessons.length === 0
     const isCompleted = completedModuleIds.has(mod.id)
     const prevModule = index === 0 ? null : course.modules[index - 1]
     const isLocked = index > 0 && !completedModuleIds.has(prevModule!.id)
@@ -83,7 +85,7 @@ export default async function CoursePage({
       moduleQuizIds.length > 0 && moduleQuizIds.every((id) => perfectQuizIds.has(id))
     const certificateId = certByModule.get(mod.id) ?? null
 
-    return { ...mod, isLocked, isCompleted, certEligible, certificateId }
+    return { ...mod, comingSoon, isLocked, isCompleted, certEligible, certificateId }
   })
 
   const allLessons = course.modules.flatMap((m) => m.lessons)
@@ -148,13 +150,34 @@ export default async function CoursePage({
           <div
             key={mod.id}
             className={`bg-white rounded-xl border-2 transition-all ${
-              mod.isCompleted
+              mod.comingSoon
+                ? 'border-amber-200 border-dashed bg-amber-50/40'
+                : mod.isCompleted
                 ? 'border-green-200'
                 : mod.isLocked
                 ? 'border-gray-100 opacity-60'
                 : 'border-indigo-100 hover:border-indigo-300'
             }`}
           >
+            {mod.comingSoon ? (
+              <div className="flex items-center gap-4 p-5">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-amber-500 font-medium mb-0.5">МОДУЛ {index + 1}</p>
+                  <h3 className="font-semibold text-gray-700 truncate">{mod.title}</h3>
+                  <p className="text-sm text-amber-700 mt-0.5">
+                    🚧 Работим върху този модул — скоро ще бъде наличен.
+                  </p>
+                </div>
+                <span className="text-xs text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full flex-shrink-0 font-medium whitespace-nowrap">
+                  Идва скоро
+                </span>
+              </div>
+            ) : (
             <div className="flex flex-col sm:flex-row sm:items-center">
               {mod.isLocked ? (
                 <div className="flex-1 flex items-center gap-4 p-5 min-w-0">
@@ -213,6 +236,7 @@ export default async function CoursePage({
                 />
               </div>
             </div>
+            )}
           </div>
         ))}
       </div>

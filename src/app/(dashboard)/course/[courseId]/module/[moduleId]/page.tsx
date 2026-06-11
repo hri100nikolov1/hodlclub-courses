@@ -74,6 +74,11 @@ export default async function ModulePage({
   const isLocked = moduleIndex > 0 && !completedIds.has(course.modules[moduleIndex - 1].id)
   if (isLocked) redirect(`/course/${courseId}`)
 
+  // "Coming soon" modules have no lessons yet — keep students out until content is ready
+  if (currentModule.lessons.length === 0 && session.role !== 'admin') {
+    redirect(`/course/${courseId}`)
+  }
+
   const isCompleted = completedIds.has(moduleId)
   const nextModule = course.modules[moduleIndex + 1]
 
@@ -146,11 +151,24 @@ export default async function ModulePage({
           {course.modules.map((mod, index) => {
             const isCurrent = mod.id === moduleId
             const isDone = completedIds.has(mod.id)
+            const isComingSoon = mod.lessons.length === 0
             const isModLocked = index > 0 && !completedIds.has(course.modules[index - 1].id)
 
             return (
               <div key={mod.id}>
-                {isModLocked ? (
+                {isComingSoon ? (
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-dashed border-amber-200 bg-amber-50/40">
+                    <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-3.5 h-3.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-600 truncate">{mod.title}</p>
+                      <p className="text-xs text-amber-600 font-medium">Идва скоро</p>
+                    </div>
+                  </div>
+                ) : isModLocked ? (
                   <div className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50 opacity-50">
                     <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
                       <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
