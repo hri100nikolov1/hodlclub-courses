@@ -32,6 +32,7 @@ export default async function CoursePage({
           lessons: { select: { id: true, quiz: { select: { id: true } } } },
         },
       },
+      bonuses: { orderBy: { order: 'asc' } },
     },
   })
 
@@ -240,6 +241,48 @@ export default async function CoursePage({
           </div>
         ))}
       </div>
+
+      {/* Бонуси към курса */}
+      {course.bonuses.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-xl font-bold text-gray-900 mb-1">🎁 Бонуси към курса</h2>
+          <p className="text-gray-500 text-sm mb-4">Допълнителни материали за сваляне и печат.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {course.bonuses.map((b) => {
+              const isPdf = b.fileName.toLowerCase().endsWith('.pdf')
+              return (
+                <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0 text-2xl">
+                    {isPdf ? '📄' : '📊'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 text-sm truncate">{b.title}</h3>
+                    <div className="flex gap-3 mt-1">
+                      {isPdf && (
+                        <a
+                          href={`/api/bonus/${b.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-semibold text-indigo-600 hover:underline"
+                        >
+                          Отвори
+                        </a>
+                      )}
+                      <a
+                        href={`/api/bonus/${b.id}`}
+                        download={b.downloadName}
+                        className="text-xs font-semibold text-indigo-600 hover:underline"
+                      >
+                        ⬇ Свали
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {progressPct === 100 && (
         <div className="mt-8 bg-green-50 border border-green-200 rounded-2xl p-6 text-center">

@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/api/book/pdf': ['./book-assets/**'],
     '/api/book/checklist': ['./book-assets/**'],
+    '/api/bonus/[id]': ['./course-bonuses/**'],
   },
 };
 

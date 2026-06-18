@@ -37,6 +37,18 @@ model Course {
   invites     InviteToken[]
   modules     Module[]
   userAccess  UserCourseAccess[]
+  bonuses     CourseBonus[]
+}
+
+model CourseBonus {
+  id           String   @id @default(cuid())
+  courseId     String
+  title        String
+  fileName     String   // ASCII filename on disk under course-bonuses/
+  downloadName String   // original filename used for download
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 }
 
 model Module {
