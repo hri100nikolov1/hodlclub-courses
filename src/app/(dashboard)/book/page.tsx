@@ -28,6 +28,7 @@ export default async function BookPage() {
       description={book.description}
       coverUrl={book.coverUrl}
       pdfUrl={book.pdfUrl}
+      bonusPdfUrl={book.bonusPdfUrl}
       chapters={book.chapters.map((c) => ({
         id: c.id,
         title: c.title,

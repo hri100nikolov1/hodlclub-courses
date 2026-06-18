@@ -136,6 +136,7 @@ model Book {
   description String?
   coverUrl    String?
   pdfUrl      String?       // served via gated /api/book/pdf
+  bonusPdfUrl String?       // printable bonus checklist, served via gated /api/book/checklist
   isPublished Boolean       @default(true)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt

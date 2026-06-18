@@ -15,10 +15,11 @@ type Props = {
   description: string | null
   coverUrl: string | null
   pdfUrl: string | null
+  bonusPdfUrl?: string | null
   chapters: Chapter[]
 }
 
-export default function BookView({ title, description, coverUrl, pdfUrl, chapters }: Props) {
+export default function BookView({ title, description, coverUrl, pdfUrl, bonusPdfUrl, chapters }: Props) {
   const [tab, setTab] = useState<'read' | 'listen'>('read')
   const playable = chapters.filter((c) => c.audioUrl)
   const [activeChapterId, setActiveChapterId] = useState<string | null>(playable[0]?.id ?? null)
@@ -46,6 +47,37 @@ export default function BookView({ title, description, coverUrl, pdfUrl, chapter
           {description && <p className="text-gray-600 leading-relaxed">{description}</p>}
         </div>
       </div>
+
+      {/* Bonus checklist */}
+      {bonusPdfUrl && (
+        <div className="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <div className="w-11 h-11 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-2xl">📝</div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-0.5">Бонус</p>
+              <h3 className="font-bold text-gray-900">D.E.E.P. чеклист за печат</h3>
+              <p className="text-sm text-gray-500">Принтируем чеклист, който да ползваш при анализ на проекти.</p>
+            </div>
+          </div>
+          <div className="flex gap-2 flex-shrink-0">
+            <a
+              href={bonusPdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition"
+            >
+              Отвори
+            </a>
+            <a
+              href={bonusPdfUrl}
+              download="Криптогенезис-DEEP-чеклист.pdf"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-sm font-semibold transition"
+            >
+              ⬇ Свали
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5 border-b border-gray-200">
