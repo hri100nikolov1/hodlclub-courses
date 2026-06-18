@@ -16,7 +16,7 @@ export default async function DashboardLayout({
   const [ai, book] = await Promise.all([hasAIAccess(session), hasBookAccess(session)])
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="theme-dark min-h-screen flex flex-col">
       <Navbar name={session.name} role={session.role} hasAI={ai} hasBook={book} />
       <DisclaimerBanner />
       <main className="flex-1 container mx-auto max-w-6xl px-4 py-8">

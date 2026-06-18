@@ -8,8 +8,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (session.role !== 'admin') redirect('/dashboard')
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Navbar name={session.name} role={session.role} />
+    <div className="theme-dark min-h-screen flex flex-col">
+      <Navbar name={session.name} role={session.role} hasAI hasBook />
       <main className="flex-1 container mx-auto max-w-6xl px-4 py-8">
         {children}
       </main>

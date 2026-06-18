@@ -5,14 +5,121 @@
   --primary-dark: #4f46e5;
   --background: #f8fafc;
   --foreground: #0f172a;
+
+  /* Premium dark theme tokens */
+  --bg: #0a0b0e;
+  --surface: #14151a;
+  --surface-2: #1c1e26;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --text: #f3f4f7;
+  --text-dim: #b9bdc8;
+  --text-muted: #7e8493;
+  --gold: #d4b25a;
+  --gold-soft: rgba(212, 178, 90, 0.14);
+  --cyan: #45d6c2;
+  --indigo: #8b8cf0;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PREMIUM DARK THEME — scoped to .theme-dark (the dashboard shell)
+   Re-skins the existing light UI cohesively, plus bespoke helpers.
+   ───────────────────────────────────────────────────────────── */
+
+.theme-dark {
+  color: var(--text);
+  font-family: 'Manrope', sans-serif;
+}
+
+/* Atmospheric background with layered radial glows */
+.theme-dark::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 85% -5%, rgba(212, 178, 90, 0.10), transparent 60%),
+    radial-gradient(55rem 40rem at 0% 100%, rgba(69, 214, 194, 0.07), transparent 55%),
+    radial-gradient(40rem 30rem at 50% 50%, rgba(99, 102, 241, 0.05), transparent 70%),
+    var(--bg);
+}
+.theme-dark > * { position: relative; z-index: 1; }
+
+/* Headings use the display font */
+.theme-dark h1, .theme-dark h2, .theme-dark h3 {
+  font-family: 'Sora', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* ── Surface / text / border remaps for the existing utilities ── */
+.theme-dark .bg-white { background-color: var(--surface) !important; }
+.theme-dark .bg-gray-50 { background-color: var(--surface-2) !important; }
+.theme-dark .bg-gray-100 { background-color: var(--surface-2) !important; }
+.theme-dark .hover\:bg-gray-50:hover { background-color: var(--surface-2) !important; }
+.theme-dark .hover\:bg-gray-100:hover { background-color: rgba(255, 255, 255, 0.06) !important; }
+
+.theme-dark .text-gray-900 { color: var(--text) !important; }
+.theme-dark .text-gray-800 { color: var(--text) !important; }
+.theme-dark .text-gray-700 { color: var(--text-dim) !important; }
+.theme-dark .text-gray-600 { color: var(--text-dim) !important; }
+.theme-dark .text-gray-500 { color: var(--text-muted) !important; }
+.theme-dark .text-gray-400 { color: var(--text-muted) !important; }
+
+.theme-dark .border-gray-100 { border-color: var(--border) !important; }
+.theme-dark .border-gray-200 { border-color: var(--border) !important; }
+.theme-dark .border-gray-300 { border-color: var(--border-strong) !important; }
+
+/* Soft semantic tints look better translucent on dark */
+.theme-dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.12) !important; }
+.theme-dark .bg-green-100 { background-color: rgba(34, 197, 94, 0.16) !important; }
+.theme-dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.12) !important; }
+.theme-dark .bg-red-100 { background-color: rgba(239, 68, 68, 0.16) !important; }
+.theme-dark .bg-amber-100 { background-color: rgba(212, 178, 90, 0.18) !important; }
+.theme-dark .bg-indigo-100 { background-color: rgba(99, 102, 241, 0.18) !important; }
+.theme-dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.12) !important; }
+.theme-dark .text-indigo-600 { color: var(--indigo) !important; }
+.theme-dark .text-indigo-700 { color: var(--indigo) !important; }
+.theme-dark .text-indigo-300 { color: var(--indigo) !important; }
+.theme-dark .border-indigo-100 { border-color: rgba(99, 102, 241, 0.25) !important; }
+.theme-dark .border-indigo-200 { border-color: rgba(99, 102, 241, 0.4) !important; }
+.theme-dark .border-indigo-300 { border-color: rgba(99, 102, 241, 0.45) !important; }
+.theme-dark .border-green-200 { border-color: rgba(34, 197, 94, 0.3) !important; }
+.theme-dark .border-amber-200 { border-color: rgba(212, 178, 90, 0.3) !important; }
+
+/* Cards get a subtle glassy depth */
+.theme-dark .rounded-2xl.border,
+.theme-dark .rounded-xl.border {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 18px 40px -24px rgba(0, 0, 0, 0.9);
+}
+
+/* ── Bespoke helpers ── */
+.glow-gold { box-shadow: 0 0 0 1px rgba(212, 178, 90, 0.35), 0 10px 30px -8px rgba(212, 178, 90, 0.4); }
+.text-gold { color: var(--gold); }
+
+/* Custom scrollbar inside the dark shell */
+.theme-dark ::-webkit-scrollbar { width: 10px; height: 10px; }
+.theme-dark ::-webkit-scrollbar-track { background: transparent; }
+.theme-dark ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+.theme-dark ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); background-clip: content-box; }
+
+/* Staggered entrance animation */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up { animation: none; }
 }

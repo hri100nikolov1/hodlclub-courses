@@ -21,7 +21,7 @@ export default function Navbar({ name, role, hasAI = false, hasBook = false }: N
   }
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <nav className="sticky top-0 z-50 border-b border-white/10 bg-[#0c0d11]/80 backdrop-blur-xl">
       <div className="container mx-auto max-w-6xl px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-6">

@@ -41,11 +41,12 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Добре дошъл, {session.name}! 👋
+      <div className="mb-8 animate-fade-up">
+        <p className="text-[11px] font-semibold tracking-[0.25em] uppercase text-gold mb-2">HODLClub</p>
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+          Добре дошъл, {session.name}
         </h1>
-        <p className="text-gray-500 mt-1">Вашите курсове</p>
+        <p className="text-gray-500 mt-2">Продължи откъдето спря — твоето табло.</p>
       </div>
 
       {/* Book card — shown to users with book access */}
