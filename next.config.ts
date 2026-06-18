@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Ensure the gated book PDF is bundled with its API route on Vercel
+  outputFileTracingIncludes: {
+    '/api/book/pdf': ['./book-assets/**'],
+  },
 };
 
 export default nextConfig;

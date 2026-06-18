@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getSession } from '@/lib/session'
+import { hasAIAccess } from '@/lib/access'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const SYSTEM_PROMPT = `Ти си AI асистент за анализ на криптовалути на HODLClub, обучен по D.E.E.P Формулата на HODLClub за оценка на крипто проекти.
@@ -382,6 +383,9 @@ export async function POST(request: NextRequest) {
   const session = await getSession()
   if (!session) {
     return Response.json({ error: 'Не сте влезли' }, { status: 401 })
+  }
+  if (!(await hasAIAccess(session))) {
+    return Response.json({ error: 'Нямате достъп до AI анализатора' }, { status: 403 })
   }
 
   const apiKey = process.env.GEMINI_API_KEY

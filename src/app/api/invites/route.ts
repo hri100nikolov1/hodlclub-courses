@@ -9,12 +9,17 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { courseId, expiresAt } = await request.json()
-  if (!courseId) return Response.json({ error: 'courseId required' }, { status: 400 })
+  const { courseId, type, expiresAt } = await request.json()
+  const inviteType = type === 'book' ? 'book' : 'course'
+
+  if (inviteType === 'course' && !courseId) {
+    return Response.json({ error: 'courseId required' }, { status: 400 })
+  }
 
   const invite = await prisma.inviteToken.create({
     data: {
-      courseId,
+      type: inviteType,
+      courseId: inviteType === 'book' ? null : courseId,
       expiresAt: expiresAt ? new Date(expiresAt) : null,
     },
   })

@@ -5,10 +5,15 @@ import { useState, useEffect, useCallback } from 'react'
 type Invite = {
   id: string
   token: string
+  type: string
   createdAt: string
   expiresAt: string | null
-  course: { title: string }
+  course: { title: string } | null
   usedBy: { name: string; email: string } | null
+}
+
+function inviteLabel(invite: Invite) {
+  return invite.type === 'book' ? '📕 Криптогенезис (книга)' : (invite.course?.title ?? '—')
 }
 
 type Course = {
@@ -20,7 +25,7 @@ export default function AdminInvitesPage() {
   const [invites, setInvites] = useState<Invite[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedCourse, setSelectedCourse] = useState('')
+  const [selectedCourse, setSelectedCourse] = useState('__book__')
   const [creating, setCreating] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
@@ -46,10 +51,13 @@ export default function AdminInvitesPage() {
   async function createInvite() {
     if (!selectedCourse) return
     setCreating(true)
+    const body = selectedCourse === '__book__'
+      ? { type: 'book' }
+      : { courseId: selectedCourse }
     await fetch('/api/invites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ courseId: selectedCourse }),
+      body: JSON.stringify(body),
     })
     setCreating(false)
     loadData()
@@ -90,9 +98,9 @@ export default function AdminInvitesPage() {
           Как работи?
         </h3>
         <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-          <li>Генерирате инвайт линк за конкретен курс</li>
-          <li>Изпращате линка на студента (имейл, Telegram, Viber и т.н.)</li>
-          <li>Студентът се регистрира чрез линка и автоматично получава достъп до курса</li>
+          <li>Избирате за какво е линкът — курс или книгата „Криптогенезис“</li>
+          <li>Изпращате линка на купувача (имейл, Telegram, Viber и т.н.)</li>
+          <li>Той се регистрира чрез линка и автоматично получава достъп само до избраното (курс ИЛИ книга)</li>
           <li>Всеки линк може да се използва само веднъж</li>
         </ol>
       </div>
@@ -100,15 +108,14 @@ export default function AdminInvitesPage() {
       {/* Create Invite */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
         <h2 className="font-bold text-gray-900 mb-4">Генерирай нов инвайт</h2>
-        {courses.length === 0 ? (
-          <p className="text-gray-400 text-sm">Нямате създадени курсове. Първо създайте курс.</p>
-        ) : (
+        {(
           <div className="flex gap-3">
             <select
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
               className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
             >
+              <option value="__book__">📕 Криптогенезис (книга)</option>
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>{c.title}</option>
               ))}
@@ -151,7 +158,7 @@ export default function AdminInvitesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Свободен</span>
-                        <span className="text-sm font-medium text-gray-900">{invite.course.title}</span>
+                        <span className="text-sm font-medium text-gray-900">{inviteLabel(invite)}</span>
                       </div>
                       <p className="text-xs text-gray-400 font-mono truncate">
                         {typeof window !== 'undefined' ? getInviteUrl(invite.token) : invite.token}
@@ -211,7 +218,7 @@ export default function AdminInvitesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-semibold bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Използван</span>
-                        <span className="text-sm font-medium text-gray-700">{invite.course.title}</span>
+                        <span className="text-sm font-medium text-gray-700">{inviteLabel(invite)}</span>
                       </div>
                       {invite.usedBy && (
                         <p className="text-sm text-gray-600">

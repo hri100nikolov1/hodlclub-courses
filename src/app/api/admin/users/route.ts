@@ -16,6 +16,7 @@ export async function GET() {
       role: true,
       createdAt: true,
       courseAccess: { include: { course: { select: { title: true } } } },
+      productAccess: { select: { product: true } },
     },
     orderBy: { createdAt: 'desc' },
   })
@@ -23,18 +24,36 @@ export async function GET() {
   return Response.json({ users })
 }
 
-// Grant or revoke course access
+// Grant or revoke access — course (courseId) or product (book/ai)
 export async function POST(request: NextRequest) {
   const session = await getSession()
   if (!session || session.role !== 'admin') {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { userId, courseId, action } = await request.json()
-  if (!userId || !courseId || !action) {
-    return Response.json({ error: 'userId, courseId, action required' }, { status: 400 })
+  const { userId, courseId, product, action } = await request.json()
+  if (!userId || !action || (!courseId && !product)) {
+    return Response.json({ error: 'userId, action and (courseId or product) required' }, { status: 400 })
   }
 
+  // Product access (book | ai)
+  if (product) {
+    if (product !== 'book' && product !== 'ai') {
+      return Response.json({ error: 'invalid product' }, { status: 400 })
+    }
+    if (action === 'grant') {
+      await prisma.productAccess.upsert({
+        where: { userId_product: { userId, product } },
+        create: { userId, product },
+        update: {},
+      })
+    } else if (action === 'revoke') {
+      await prisma.productAccess.deleteMany({ where: { userId, product } })
+    }
+    return Response.json({ ok: true })
+  }
+
+  // Course access
   if (action === 'grant') {
     await prisma.userCourseAccess.upsert({
       where: { userId_courseId: { userId, courseId } },

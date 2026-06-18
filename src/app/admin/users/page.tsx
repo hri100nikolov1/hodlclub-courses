@@ -14,6 +14,7 @@ type User = {
   role: string
   createdAt: string
   courseAccess: CourseAccess[]
+  productAccess: { product: string }[]
 }
 
 type Course = {
@@ -61,6 +62,26 @@ export default function AdminUsersPage() {
             : [...prev.courseAccess, { courseId, course: { title: courses.find(c => c.id === courseId)?.title || '' } }]
         }
         return updated
+      })
+    }
+  }
+
+  async function toggleProduct(userId: string, product: 'book' | 'ai', hasAccess: boolean) {
+    await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, product, action: hasAccess ? 'revoke' : 'grant' }),
+    })
+    loadData()
+    if (selectedUser) {
+      setSelectedUser((prev) => {
+        if (!prev) return null
+        return {
+          ...prev,
+          productAccess: hasAccess
+            ? prev.productAccess.filter((p) => p.product !== product)
+            : [...prev.productAccess, { product }],
+        }
       })
     }
   }
@@ -181,6 +202,62 @@ export default function AdminUsersPage() {
                       )
                     })}
                   </div>
+                </div>
+
+                {/* Product access: Book + AI */}
+                <div className="mt-6">
+                  <h3 className="font-bold text-gray-900 mb-3">Достъп до продукти</h3>
+                  <div className="space-y-2">
+                    {/* Book */}
+                    {(() => {
+                      const hasBook = selectedUser.productAccess.some((p) => p.product === 'book')
+                      return (
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
+                          <span className="text-sm font-medium text-gray-700">📕 Книга „Криптогенезис“</span>
+                          <button
+                            onClick={() => toggleProduct(selectedUser.id, 'book', hasBook)}
+                            className={`text-xs font-semibold px-3 py-1.5 rounded-xl transition ${
+                              hasBook
+                                ? 'bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-700'
+                                : 'bg-gray-200 text-gray-600 hover:bg-indigo-100 hover:text-indigo-700'
+                            }`}
+                          >
+                            {hasBook ? '✓ Има достъп' : '+ Дай достъп'}
+                          </button>
+                        </div>
+                      )
+                    })()}
+
+                    {/* AI — bundled with course access; standalone grant otherwise */}
+                    {(() => {
+                      const hasCourse = selectedUser.courseAccess.length > 0
+                      const hasAIProduct = selectedUser.productAccess.some((p) => p.product === 'ai')
+                      return (
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
+                          <span className="text-sm font-medium text-gray-700">🤖 AI Анализатор</span>
+                          {hasCourse ? (
+                            <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-green-100 text-green-700">
+                              ✓ Има достъп (през курса)
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => toggleProduct(selectedUser.id, 'ai', hasAIProduct)}
+                              className={`text-xs font-semibold px-3 py-1.5 rounded-xl transition ${
+                                hasAIProduct
+                                  ? 'bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-700'
+                                  : 'bg-gray-200 text-gray-600 hover:bg-indigo-100 hover:text-indigo-700'
+                              }`}
+                            >
+                              {hasAIProduct ? '✓ Има достъп' : '+ Дай достъп'}
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    AI Анализаторът е включен автоматично за всеки с достъп до курс. Самостоятелен достъп се дава тук само на хора без курс.
+                  </p>
                 </div>
               </div>
             )}

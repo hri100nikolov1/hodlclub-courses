@@ -38,16 +38,21 @@ export async function POST(request: NextRequest) {
 
     const hashed = await bcrypt.hash(password, 12)
 
-    // Create user and grant course access
+    // Grant access based on invite type: book → book product, otherwise course
+    const isBook = invite.type === 'book'
+    if (!isBook && !invite.courseId) {
+      return Response.json({ error: 'Невалиден инвайт линк' }, { status: 400 })
+    }
+
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashed,
         role: 'student',
-        courseAccess: {
-          create: { courseId: invite.courseId },
-        },
+        ...(isBook
+          ? { productAccess: { create: { product: 'book' } } }
+          : { courseAccess: { create: { courseId: invite.courseId! } } }),
       },
     })
 

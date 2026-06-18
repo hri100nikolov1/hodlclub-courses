@@ -1,7 +1,10 @@
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
+import { hasBookAccess } from '@/lib/access'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
 import CryptoPrices from '@/components/CryptoPrices'
 import CryptoNews from '@/components/CryptoNews'
 import CourseGrid from '@/components/CourseGrid'
@@ -9,6 +12,11 @@ import CourseGrid from '@/components/CourseGrid'
 export default async function DashboardPage() {
   const session = await getSession()
   if (!session) redirect('/login')
+
+  const userHasBook = await hasBookAccess(session)
+  const book = userHasBook
+    ? await prisma.book.findFirst({ where: { isPublished: true }, select: { title: true, description: true, coverUrl: true } })
+    : null
 
   const accessList = await prisma.userCourseAccess.findMany({
     where: { userId: session.userId },
@@ -40,7 +48,37 @@ export default async function DashboardPage() {
         <p className="text-gray-500 mt-1">Вашите курсове</p>
       </div>
 
+      {/* Book card — shown to users with book access */}
+      {book && (
+        <Link
+          href="/book"
+          className="block bg-white rounded-2xl border border-gray-200 hover:border-indigo-300 transition p-5 mb-6"
+        >
+          <div className="flex items-center gap-5">
+            {book.coverUrl && (
+              <Image
+                src={book.coverUrl}
+                alt={book.title}
+                width={80}
+                height={113}
+                className="rounded-lg shadow w-20 h-auto object-contain flex-shrink-0"
+                unoptimized
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-0.5">Книга + аудиокнига</p>
+              <h3 className="font-bold text-gray-900">{book.title}</h3>
+              {book.description && <p className="text-sm text-gray-500 mt-1 line-clamp-2">{book.description}</p>}
+            </div>
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl bg-indigo-600 text-white flex-shrink-0">
+              Отвори →
+            </span>
+          </div>
+        </Link>
+      )}
+
       {accessList.length === 0 ? (
+        book ? null : (
         <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -50,6 +88,7 @@ export default async function DashboardPage() {
           <h3 className="text-gray-700 font-medium mb-1">Нямате достъп до курсове</h3>
           <p className="text-gray-400 text-sm">Свържете се с администратора за достъп.</p>
         </div>
+        )
       ) : (
         <CourseGrid
           courses={accessList.map(({ course }) => {

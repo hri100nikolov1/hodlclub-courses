@@ -23,6 +23,7 @@ model User {
   passwordResetTokens  PasswordResetToken[]
   quizAttempts         QuizAttempt[]
   certificates         Certificate[]
+  productAccess        ProductAccess[]
 }
 
 model Course {
@@ -120,12 +121,46 @@ model ModuleProgress {
 model InviteToken {
   id        String    @id @default(cuid())
   token     String    @unique @default(cuid())
-  courseId  String
+  type      String    @default("course") // 'course' | 'book'
+  courseId  String?
   usedById  String?   @unique
   expiresAt DateTime?
   createdAt DateTime  @default(now())
-  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course    Course?   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   usedBy    User?     @relation("UsedInvite", fields: [usedById], references: [id])
+}
+
+model Book {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  coverUrl    String?
+  pdfUrl      String?       // served via gated /api/book/pdf
+  isPublished Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  chapters    BookChapter[]
+}
+
+model BookChapter {
+  id        String   @id @default(cuid())
+  bookId    String
+  title     String
+  audioUrl  String?  // Bunny embed/stream URL
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+}
+
+model ProductAccess {
+  id        String   @id @default(cuid())
+  userId    String
+  product   String   // 'book' | 'ai'
+  grantedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, product])
 }
 
 model Certificate {
