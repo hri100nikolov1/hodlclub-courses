@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 
 type CourseAccess = {
   courseId: string
+  moduleLimit: number | null
   course: { title: string }
 }
 
@@ -59,7 +60,7 @@ export default function AdminUsersPage() {
           ...prev,
           courseAccess: hasAccess
             ? prev.courseAccess.filter((a) => a.courseId !== courseId)
-            : [...prev.courseAccess, { courseId, course: { title: courses.find(c => c.id === courseId)?.title || '' } }]
+            : [...prev.courseAccess, { courseId, moduleLimit: null, course: { title: courses.find(c => c.id === courseId)?.title || '' } }]
         }
         return updated
       })
@@ -228,14 +229,14 @@ export default function AdminUsersPage() {
                       )
                     })()}
 
-                    {/* AI — bundled with course access; standalone grant otherwise */}
+                    {/* AI — bundled with FULL course access; standalone grant otherwise */}
                     {(() => {
-                      const hasCourse = selectedUser.courseAccess.length > 0
+                      const hasFullCourse = selectedUser.courseAccess.some((a) => a.moduleLimit == null)
                       const hasAIProduct = selectedUser.productAccess.some((p) => p.product === 'ai')
                       return (
                         <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
                           <span className="text-sm font-medium text-gray-700">🤖 AI Анализатор</span>
-                          {hasCourse ? (
+                          {hasFullCourse ? (
                             <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-green-100 text-green-700">
                               ✓ Има достъп (през курса)
                             </span>

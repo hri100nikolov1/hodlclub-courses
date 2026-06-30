@@ -14,13 +14,13 @@ export default async function ModulePage({
 
   const { courseId, moduleId } = await params
 
-  const hasAccess =
-    session.role === 'admin' ||
-    !!(await prisma.userCourseAccess.findUnique({
-      where: { userId_courseId: { userId: session.userId, courseId } },
-    }))
-
+  const accessRecord = await prisma.userCourseAccess.findUnique({
+    where: { userId_courseId: { userId: session.userId, courseId } },
+  })
+  const hasAccess = session.role === 'admin' || !!accessRecord
   if (!hasAccess) redirect('/dashboard')
+
+  const moduleLimit = session.role === 'admin' ? null : (accessRecord?.moduleLimit ?? null)
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },
@@ -36,6 +36,11 @@ export default async function ModulePage({
 
   const moduleIndex = course.modules.findIndex((m) => m.id === moduleId)
   if (moduleIndex === -1) notFound()
+
+  // Downsell plan: modules beyond the limit are not included
+  if (moduleLimit !== null && moduleIndex >= moduleLimit) {
+    redirect(`/course/${courseId}`)
+  }
 
   const currentModule = course.modules[moduleIndex]
 
@@ -152,11 +157,24 @@ export default async function ModulePage({
             const isCurrent = mod.id === moduleId
             const isDone = completedIds.has(mod.id)
             const isComingSoon = mod.lessons.length === 0
+            const isPlanLocked = moduleLimit !== null && index >= moduleLimit
             const isModLocked = index > 0 && !completedIds.has(course.modules[index - 1].id)
 
             return (
               <div key={mod.id}>
-                {isComingSoon ? (
+                {isPlanLocked ? (
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50 opacity-60">
+                    <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-500 truncate">{mod.title}</p>
+                      <p className="text-xs text-indigo-500">Пълен курс</p>
+                    </div>
+                  </div>
+                ) : isComingSoon ? (
                   <div className="flex items-center gap-3 p-3 rounded-xl border border-dashed border-amber-200 bg-amber-50/40">
                     <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
                       <svg className="w-3.5 h-3.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

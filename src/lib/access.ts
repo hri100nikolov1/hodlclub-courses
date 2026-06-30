@@ -6,9 +6,9 @@ import type { SessionPayload } from '@/lib/session'
  *
  * - Course access: existing UserCourseAccess (unchanged).
  * - Book access: ProductAccess 'book' (or admin).
- * - AI access: bundled with ANY course access (as it always was), or granted
- *   standalone via ProductAccess 'ai' (or admin). This preserves AI for all
- *   existing course users while keeping book-only buyers out.
+ * - AI access: bundled with FULL course access (moduleLimit = null), or granted
+ *   standalone via ProductAccess 'ai' (or admin). Limited (downsell) buyers who
+ *   only have the first N modules do NOT get the AI analyzer.
  */
 
 export async function hasBookAccess(session: SessionPayload | null): Promise<boolean> {
@@ -23,13 +23,13 @@ export async function hasBookAccess(session: SessionPayload | null): Promise<boo
 export async function hasAIAccess(session: SessionPayload | null): Promise<boolean> {
   if (!session) return false
   if (session.role === 'admin') return true
-  const [courseCount, ai] = await Promise.all([
-    prisma.userCourseAccess.count({ where: { userId: session.userId } }),
+  const [fullCourseCount, ai] = await Promise.all([
+    prisma.userCourseAccess.count({ where: { userId: session.userId, moduleLimit: null } }),
     prisma.productAccess.findUnique({
       where: { userId_product: { userId: session.userId, product: 'ai' } },
     }),
   ])
-  return courseCount > 0 || !!ai
+  return fullCourseCount > 0 || !!ai
 }
 
 export async function hasAnyCourseAccess(session: SessionPayload | null): Promise<boolean> {

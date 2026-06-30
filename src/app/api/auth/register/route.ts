@@ -38,11 +38,24 @@ export async function POST(request: NextRequest) {
 
     const hashed = await bcrypt.hash(password, 12)
 
-    // Grant access based on invite type: book → book product, otherwise course
+    // Grant access based on invite type:
+    //   book          → book product only
+    //   book_modules  → book product + course limited to first N modules
+    //   course        → full course
     const isBook = invite.type === 'book'
+    const isBookModules = invite.type === 'book_modules'
     if (!isBook && !invite.courseId) {
       return Response.json({ error: 'Невалиден инвайт линк' }, { status: 400 })
     }
+
+    const accessData = isBook
+      ? { productAccess: { create: { product: 'book' } } }
+      : isBookModules
+      ? {
+          productAccess: { create: { product: 'book' } },
+          courseAccess: { create: { courseId: invite.courseId!, moduleLimit: invite.moduleLimit ?? null } },
+        }
+      : { courseAccess: { create: { courseId: invite.courseId! } } }
 
     const user = await prisma.user.create({
       data: {
@@ -50,9 +63,7 @@ export async function POST(request: NextRequest) {
         email,
         password: hashed,
         role: 'student',
-        ...(isBook
-          ? { productAccess: { create: { product: 'book' } } }
-          : { courseAccess: { create: { courseId: invite.courseId! } } }),
+        ...accessData,
       },
     })
 

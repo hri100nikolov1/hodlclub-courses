@@ -109,12 +109,13 @@ model LessonProgress {
 }
 
 model UserCourseAccess {
-  id        String   @id @default(cuid())
-  userId    String
-  courseId  String
-  grantedAt DateTime @default(now())
-  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  userId      String
+  courseId    String
+  moduleLimit Int?     // null = full course; N = only first N modules (by order)
+  grantedAt   DateTime @default(now())
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
 }
@@ -131,15 +132,16 @@ model ModuleProgress {
 }
 
 model InviteToken {
-  id        String    @id @default(cuid())
-  token     String    @unique @default(cuid())
-  type      String    @default("course") // 'course' | 'book'
-  courseId  String?
-  usedById  String?   @unique
-  expiresAt DateTime?
-  createdAt DateTime  @default(now())
-  course    Course?   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  usedBy    User?     @relation("UsedInvite", fields: [usedById], references: [id])
+  id          String    @id @default(cuid())
+  token       String    @unique @default(cuid())
+  type        String    @default("course") // 'course' | 'book' | 'book_modules'
+  courseId    String?
+  moduleLimit Int?      // for 'book_modules': how many modules to unlock
+  usedById    String?   @unique
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  course      Course?   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  usedBy      User?     @relation("UsedInvite", fields: [usedById], references: [id])
 }
 
 model Book {

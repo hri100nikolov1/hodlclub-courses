@@ -6,6 +6,7 @@ type Invite = {
   id: string
   token: string
   type: string
+  moduleLimit: number | null
   createdAt: string
   expiresAt: string | null
   course: { title: string } | null
@@ -13,7 +14,9 @@ type Invite = {
 }
 
 function inviteLabel(invite: Invite) {
-  return invite.type === 'book' ? '📕 Криптогенезис (книга)' : (invite.course?.title ?? '—')
+  if (invite.type === 'book') return '📕 Криптогенезис (книга)'
+  if (invite.type === 'book_modules') return `📘 Книга + ${invite.moduleLimit ?? 3} модула`
+  return invite.course?.title ?? '—'
 }
 
 type Course = {
@@ -51,9 +54,14 @@ export default function AdminInvitesPage() {
   async function createInvite() {
     if (!selectedCourse) return
     setCreating(true)
-    const body = selectedCourse === '__book__'
-      ? { type: 'book' }
-      : { courseId: selectedCourse }
+    let body: Record<string, unknown>
+    if (selectedCourse === '__book__') {
+      body = { type: 'book' }
+    } else if (selectedCourse === '__book3__') {
+      body = { type: 'book_modules', courseId: courses[0]?.id, moduleLimit: 3 }
+    } else {
+      body = { courseId: selectedCourse }
+    }
     await fetch('/api/invites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -116,6 +124,7 @@ export default function AdminInvitesPage() {
               className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
             >
               <option value="__book__">📕 Криптогенезис (книга)</option>
+              <option value="__book3__">📘 Книга + 3 модула (даунсел)</option>
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>{c.title}</option>
               ))}
