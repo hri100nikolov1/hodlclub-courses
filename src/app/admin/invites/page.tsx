@@ -6,6 +6,7 @@ type Invite = {
   id: string
   token: string
   type: string
+  courseId: string | null
   moduleLimit: number | null
   createdAt: string
   expiresAt: string | null
@@ -31,6 +32,9 @@ export default function AdminInvitesPage() {
   const [selectedCourse, setSelectedCourse] = useState('__book__')
   const [creating, setCreating] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editSelection, setEditSelection] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const loadData = useCallback(async () => {
     const [invitesRes, coursesRes] = await Promise.all([
@@ -51,23 +55,50 @@ export default function AdminInvitesPage() {
     loadData()
   }, [loadData])
 
+  function selectionToBody(selection: string) {
+    if (selection === '__book__') return { type: 'book' }
+    if (selection === '__book3__') return { type: 'book_modules', courseId: courses[0]?.id, moduleLimit: 3 }
+    return { type: 'course', courseId: selection }
+  }
+
   async function createInvite() {
     if (!selectedCourse) return
     setCreating(true)
-    let body: Record<string, unknown>
-    if (selectedCourse === '__book__') {
-      body = { type: 'book' }
-    } else if (selectedCourse === '__book3__') {
-      body = { type: 'book_modules', courseId: courses[0]?.id, moduleLimit: 3 }
-    } else {
-      body = { courseId: selectedCourse }
-    }
     await fetch('/api/invites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(selectionToBody(selectedCourse)),
     })
     setCreating(false)
+    loadData()
+  }
+
+  function inviteToSelection(invite: Invite) {
+    if (invite.type === 'book') return '__book__'
+    if (invite.type === 'book_modules') return '__book3__'
+    return invite.courseId ?? ''
+  }
+
+  function startEdit(invite: Invite) {
+    setEditingId(invite.id)
+    setEditSelection(inviteToSelection(invite))
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setEditSelection('')
+  }
+
+  async function saveEdit(id: string) {
+    if (!editSelection) return
+    setSaving(true)
+    await fetch('/api/invites', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...selectionToBody(editSelection) }),
+    })
+    setSaving(false)
+    setEditingId(null)
     loadData()
   }
 
@@ -164,50 +195,91 @@ export default function AdminInvitesPage() {
               <div className="space-y-2">
                 {unused.map((invite) => (
                   <div key={invite.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Свободен</span>
-                        <span className="text-sm font-medium text-gray-900">{inviteLabel(invite)}</span>
-                      </div>
-                      <p className="text-xs text-gray-400 font-mono truncate">
-                        {typeof window !== 'undefined' ? getInviteUrl(invite.token) : invite.token}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Създаден: {new Date(invite.createdAt).toLocaleDateString('bg-BG')}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => copyLink(invite)}
-                        className={`text-sm font-medium px-3 py-2 rounded-xl transition flex items-center gap-1.5 ${
-                          copiedId === invite.id
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'
-                        }`}
-                      >
-                        {copiedId === invite.id ? (
-                          <>
-                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                            Копиран!
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            Копирай линк
-                          </>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => deleteInvite(invite.id)}
-                        className="bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium px-3 py-2 rounded-xl transition"
-                      >
-                        Изтрий
-                      </button>
-                    </div>
+                    {editingId === invite.id ? (
+                      <>
+                        <div className="flex-1 min-w-0 flex gap-3">
+                          <select
+                            value={editSelection}
+                            onChange={(e) => setEditSelection(e.target.value)}
+                            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 bg-white"
+                          >
+                            <option value="__book__">📕 Криптогенезис (книга)</option>
+                            <option value="__book3__">📘 Книга + 3 модула (даунсел)</option>
+                            {courses.map((c) => (
+                              <option key={c.id} value={c.id}>{c.title}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => saveEdit(invite.id)}
+                            disabled={saving}
+                            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-medium px-3 py-2 rounded-xl transition"
+                          >
+                            {saving ? 'Запазване...' : 'Запази'}
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-3 py-2 rounded-xl transition"
+                          >
+                            Откажи
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Свободен</span>
+                            <span className="text-sm font-medium text-gray-900">{inviteLabel(invite)}</span>
+                          </div>
+                          <p className="text-xs text-gray-400 font-mono truncate">
+                            {typeof window !== 'undefined' ? getInviteUrl(invite.token) : invite.token}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Създаден: {new Date(invite.createdAt).toLocaleDateString('bg-BG')}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => copyLink(invite)}
+                            className={`text-sm font-medium px-3 py-2 rounded-xl transition flex items-center gap-1.5 ${
+                              copiedId === invite.id
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'
+                            }`}
+                          >
+                            {copiedId === invite.id ? (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                                Копиран!
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                Копирай линк
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => startEdit(invite)}
+                            className="bg-amber-50 hover:bg-amber-100 text-amber-700 text-sm font-medium px-3 py-2 rounded-xl transition"
+                          >
+                            Редактирай
+                          </button>
+                          <button
+                            onClick={() => deleteInvite(invite.id)}
+                            className="bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium px-3 py-2 rounded-xl transition"
+                          >
+                            Изтрий
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
