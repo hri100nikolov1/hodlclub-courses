@@ -24,6 +24,7 @@ model User {
   quizAttempts         QuizAttempt[]
   certificates         Certificate[]
   productAccess        ProductAccess[]
+  simPortfolio         SimPortfolio?
 }
 
 model Course {
@@ -201,6 +202,51 @@ model QuizAttempt {
   quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
 
   @@unique([userId, quizId])
+}
+
+// ─── Trading simulator (paper trading, virtual USD only) ───
+
+model SimPortfolio {
+  id         String       @id @default(cuid())
+  userId     String       @unique
+  cashUsd    Float        @default(10000)
+  startUsd   Float        @default(10000) // starting balance, baseline for total P&L
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holdings   SimHolding[]
+  trades     SimTrade[]
+}
+
+model SimHolding {
+  id          String       @id @default(cuid())
+  portfolioId String
+  coinId      String // CoinGecko id, e.g. 'bitcoin'
+  symbol      String
+  name        String
+  image       String?
+  amount      Float
+  avgCostUsd  Float // average entry price per coin
+  updatedAt   DateTime     @updatedAt
+  portfolio   SimPortfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, coinId])
+}
+
+model SimTrade {
+  id             String       @id @default(cuid())
+  portfolioId    String
+  coinId         String
+  symbol         String
+  side           String // 'buy' | 'sell'
+  amount         Float // coins traded
+  priceUsd       Float // execution price per coin
+  totalUsd       Float // amount * priceUsd
+  realizedPnlUsd Float? // sells only: (price - avgCost) * amount
+  createdAt      DateTime     @default(now())
+  portfolio      SimPortfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, createdAt])
 }
 
 model PasswordResetToken {

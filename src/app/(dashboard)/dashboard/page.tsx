@@ -107,6 +107,32 @@ export default async function DashboardPage() {
           })}
         />
       )}
+      {/* Trading simulator card — for users with course access */}
+      {accessList.length > 0 && (
+        <Link
+          href="/simulator"
+          className="block bg-white rounded-2xl border border-gray-200 hover:border-green-200 transition p-5 mt-6"
+        >
+          <div className="flex items-center gap-5">
+            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-0.5">Практика без риск</p>
+              <h3 className="font-bold text-gray-900">Търговски симулатор</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Търгувай с виртуални $10,000 по реални пазарни цени и следи резултата си.
+              </p>
+            </div>
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl bg-green-600 text-white flex-shrink-0">
+              Отвори →
+            </span>
+          </div>
+        </Link>
+      )}
+
       {/* Crypto Prices */}
       <div className="mt-10">
         <Suspense fallback={
