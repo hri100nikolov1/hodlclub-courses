@@ -142,15 +142,13 @@ export default function FlipBook({ pdfUrl, title }: Props) {
   if (status === 'error') {
     return (
       <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
-        <p className="text-red-700 font-medium mb-2">Не успяхме да заредим книгата тук.</p>
-        <a
-          href={pdfUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+        <p className="text-red-700 font-medium mb-2">Не успяхме да заредим книгата в момента.</p>
+        <button
+          onClick={() => window.location.reload()}
           className="inline-flex items-center gap-2 text-sm text-indigo-600 font-medium hover:underline"
         >
-          Отвори PDF в нов таб
-        </a>
+          Опитай отново
+        </button>
       </div>
     )
   }
@@ -176,7 +174,7 @@ export default function FlipBook({ pdfUrl, title }: Props) {
   }
 
   return (
-    <div className="select-none">
+    <div className="select-none" onContextMenu={(e) => e.preventDefault()}>
       <div className="mx-auto w-full max-w-[1000px]">
         <div ref={bookRef} className="flip-book mx-auto" style={{ touchAction: 'pan-y' }}>
           {pages.map((src, i) => (

@@ -106,19 +106,7 @@ export default function BookView({ title, description, coverUrl, pdfUrl, bonusPd
       {tab === 'read' && (
         <div>
           {pdfUrl ? (
-            <>
-              <FlipBook pdfUrl={pdfUrl} title={title} />
-              <div className="mt-4 text-center">
-                <a
-                  href={pdfUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm text-indigo-600 font-medium hover:underline"
-                >
-                  Предпочиташ класически изглед? Отвори PDF в нов таб
-                </a>
-              </div>
-            </>
+            <FlipBook pdfUrl={pdfUrl} title={title} />
           ) : (
             <p className="text-gray-500 text-center py-16">Текстовият вариант ще бъде наличен скоро.</p>
           )}

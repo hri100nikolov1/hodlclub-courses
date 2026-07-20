@@ -6,9 +6,18 @@ import { hasBookAccess } from '@/lib/access'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getSession()
   if (!(await hasBookAccess(session))) {
+    return new Response('Forbidden', { status: 403 })
+  }
+
+  // Only the in-app reader may fetch the file. A direct browser navigation to
+  // this URL (address bar, "open in new tab") sends Sec-Fetch-Dest: document —
+  // block that so the raw PDF can't be opened/saved outside the flipbook.
+  // The reader's fetch() sends Sec-Fetch-Dest: empty. Missing header (older
+  // browsers) is allowed so the reader keeps working.
+  if (request.headers.get('sec-fetch-dest') === 'document') {
     return new Response('Forbidden', { status: 403 })
   }
 
