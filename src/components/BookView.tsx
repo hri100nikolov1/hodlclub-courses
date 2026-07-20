@@ -2,6 +2,9 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
+
+const FlipBook = dynamic(() => import('@/components/FlipBook'), { ssr: false })
 
 type Chapter = {
   id: string
@@ -104,22 +107,15 @@ export default function BookView({ title, description, coverUrl, pdfUrl, bonusPd
         <div>
           {pdfUrl ? (
             <>
-              <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-100">
-                <iframe
-                  src={pdfUrl}
-                  title={title}
-                  className="w-full"
-                  style={{ height: '80vh' }}
-                />
-              </div>
-              <div className="mt-3 text-center">
+              <FlipBook pdfUrl={pdfUrl} title={title} />
+              <div className="mt-4 text-center">
                 <a
                   href={pdfUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-sm text-indigo-600 font-medium hover:underline"
                 >
-                  Отвори в нов таб (ако не се зарежда тук)
+                  Предпочиташ класически изглед? Отвори PDF в нов таб
                 </a>
               </div>
             </>

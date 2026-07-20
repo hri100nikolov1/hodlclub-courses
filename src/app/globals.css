@@ -123,3 +123,21 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up { animation: none; }
 }
+
+/* ── Flipbook (page-flip) ── */
+.flip-book { margin-inline: auto; }
+.flip-book .flip-page {
+  overflow: hidden;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+.flip-book .flip-page img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+/* Soft gutter shadow on the spine side of a spread */
+.flip-book .--left .flip-page { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+.flip-book .--right .flip-page { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
